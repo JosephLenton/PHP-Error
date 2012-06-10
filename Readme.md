@@ -18,7 +18,12 @@ Features
 Example Usage
 -------------
 
-Download the script and place it into your project. At the earliest moment then import and start error messages.
+ * [Get the library](https://github.com/JosephLenton/PHP-Better-Error-Reporting/blob/master/src/better_error_reporting.php), it's just one file.
+ * Place it into your project.
+ * import the file
+ * call: \better_error_messages\reportErrors()
+ * ???
+ * profit! \o/
 
 ```php
 	<?
