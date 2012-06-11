@@ -1773,8 +1773,9 @@
                                         currentID = '#' + lines.filter( '.show' ).attr( 'id' );
 
                                     $( '.error-stack-trace-line' ).
-                                            mouseenter( function() {
+                                            mouseover( function() {
                                                 var $this = $(this);
+
                                                 if ( ! $this.hasClass('select-highlight') ) {
                                                     var lineID = $this.data( 'file-lines-id' );
 
@@ -1782,20 +1783,21 @@
                                                     if ( lineID ) {
                                                         var nextLines = lines.filter( '#'+lineID );
 
-                                                        if ( ! nextLines.is(':visible') ) {
-                                                            lines.filter( ':visible' ).fadeOut( FADE_SPEED );
-                                                            nextLines.fadeIn( FADE_SPEED );
+                                                        if ( ! nextLines.is('.show') ) {
+                                                            lines.filter('.show').removeClass( 'show' );
+                                                            nextLines.addClass( 'show' );
                                                         }
                                                     }
                                                 }
                                             }).
-                                            mouseleave( function() {
+                                            mouseout( function(ev) {
                                                 var $this = $(this);
 
                                                 $this.removeClass( 'select-highlight' );
                                             }).
                                             click( function() {
                                                 var $this = $(this);
+
                                                 if ( ! $this.hasClass('highlight') ) {
                                                     $( '.error-stack-trace-line.highlight' ).removeClass( 'highlight' );
 
@@ -1808,12 +1810,8 @@
                                                 }
                                             });
                                     $('#error-stack-trace').mouseleave( function() {
-                                        var next = lines.filter( currentID );
-
-                                        if ( ! next.is(':visible') ) {
-                                            lines.fadeOut( FADE_SPEED );
-                                            next.clearQueue().fadeIn( FADE_SPEED );
-                                        }
+                                        lines.filter('.show').removeClass( 'show' );
+                                        lines.filter( currentID ).addClass( 'show' );
                                     });
                                 }
                             } );
@@ -1923,11 +1921,18 @@
                     top : 18px;
                     left: 0;
 
-                    display: none;
+                    display: inline-block;
+                    opacity: 0;
                     min-width: 320px;
+
+                    -webkit-transition: opacity 120ms linear;
+                       -moz-transition: opacity 120ms linear;
+                        -ms-transition: opacity 120ms linear;
+                         -o-transition: opacity 120ms linear;
+                            transition: opacity 120ms linear;
                 }
                 .error-file-lines.show {
-                    display: block;
+                    opacity: 1;
                 }
                     .error-file-line {
                         font: 16px consolas;
