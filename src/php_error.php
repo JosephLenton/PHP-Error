@@ -129,8 +129,8 @@
          *  blah::foo()
          *  foo()
          */
-        const REGEX_METHOD_OR_FUNCTION_END = '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?\\(\\)$/';
-        const REGEX_METHOD_OR_FUNCTION = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/';
+        const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
+        const REGEX_METHOD_OR_FUNCTION     = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/';
 
         /**
          * The number of lines to take from the file,
