@@ -126,6 +126,7 @@
 
         /**
          * Matches:
+         *  {closure}()
          *  blah::foo()
          *  foo()
          */
