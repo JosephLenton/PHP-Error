@@ -3,7 +3,7 @@ PHP Error | Improve Error Reporting for PHP
 
 PHP errors are not good enough for development, it's as simple as that. This aims to solve this.
 
-![Better Error Message](http://i.imgur.com/WdvX9.png)
+![Better Error Message](http://i.imgur.com/1G77I.png)
 
 When an error strikes, the page is replaced with a full stack trace, syntax highlighting, and all displayed to be readable.
 
@@ -51,7 +51,7 @@ Advanced Features
  * ignore files allowing you to avoid highlighting code in your stack trace
  * application files; these are prioritized when an error strikes!
  
-![Application Aware Stack Trace](http://i.imgur.com/tQxc0.png)
+![Application Aware Stack Trace](http://i.imgur.com/qdwnb.png)
 
 Customization
 -------------
