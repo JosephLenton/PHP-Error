@@ -2,7 +2,7 @@
     /**
      * @license
      * 
-     * Better Error
+     * PHP Error
      * 
      * Copyright (c) 2012 Joseph Lenton
      * All rights reserved.
@@ -31,14 +31,14 @@
      */
 
     /**
-     * PHP Better Error Reporting
+     * PHP Error
      * 
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
      * 
      * WARNING! It is downright _DANGEROUS_ to use this in production, on
      * a live website. It should *ONLY* be used for development.
      * 
-     * Better Errors will kill your environment at will, clear the output
+     * PHP Error will kill your environment at will, clear the output
      * buffers, and allows HTML injection from exception and other places.
      * In future versions it plans to do far more then that.
      * 
@@ -55,7 +55,7 @@
      * 
      * simple usage:
      * 
-     *      \better_error_reporting\reportErrors();
+     *      \php_error\reportErrors();
      * 
      * Advanced example:
      * 
@@ -63,7 +63,7 @@
      * can pass in options, to customize the setup, and you get back a
      * handler you can alter at runtime.
      * 
-     *      $handler = new \better_error_reporting\BetterErrorsReporter( $myOptions );
+     *      $handler = new \php_error\BetterErrorsReporter( $myOptions );
      *      $handler->turnOn();
      * 
      * There should only ever be one handler! This is an (underdstandable)
@@ -75,10 +75,10 @@
      * @author Joseph Lenton | https://github.com/josephlenton
      */
 
-    namespace better_error_reporting;
+    namespace php_error;
 
-    use \better_error_reporting\ErrorToExceptionException,
-        \better_error_reporting\BetterErrorsReporter;
+    use \php_error\ErrorToExceptionException,
+        \php_error\BetterErrorsReporter;
 
     use \Exception,
         \InvalidArgumentException;
@@ -87,8 +87,8 @@
         \ReflectionFunction,
         \ReflectionParameter;
 
-    global $_better_error_reporting_global_handler;
-    $_better_error_reporting_global_handler = null;
+    global $_php_error_global_handler;
+    $_php_error_global_handler = null;
 
     /**
      * Turns on error reporting, and returns the handler.
@@ -101,11 +101,17 @@
      * Note that you can only call this *once*. Repeat calls
      * will throw an exception.
      * 
-     * @param options Optional, options declaring how better errors should be setup and used.
+     * @param options Optional, options declaring how PHP Error should be setup and used.
      * @return The BetterErrorsReporter used for reporting errors.
      */
     function reportErrors( $options=null ) {
-        $handler = new BetterErrorsReporter( $options );
+        global $_php_error_global_handler;
+        if ( $options === null && $_php_error_global_handler !== null ) {
+            $handler = $_php_error_global_handler;
+        } else {
+            $handler = new BetterErrorsReporter( $options );
+        }
+        
         return $handler->turnOn();
     }
 
@@ -832,11 +838,11 @@
          */
         public function __construct( $options=null ) {
             // there can only be one to rule them all
-            global $_better_error_reporting_global_handler;
-            if ( $_better_error_reporting_global_handler !== null ) {
-                throw new Exception( "there can only ever be one BetterErrorsReporter" );
+            global $_php_error_global_handler;
+            if ( $_php_error_global_handler !== null ) {
+                throw new Exception( "there can only ever be one error reporter!" );
             }
-            $_better_error_reporting_global_handler = $this;
+            $_php_error_global_handler = $this;
 
             $this->cachedFiles = array();
 
@@ -1659,7 +1665,7 @@
             $serverName     = $this->serverName;
             $backgroundText = $this->backgroundText;
             
-            \better_error_reporting\displayHTML(
+            \php_error\displayHTML(
                     // pre, in the head
                     function() use( $message, $errFile, $errLine ) {
                             echo "<!--\n" .

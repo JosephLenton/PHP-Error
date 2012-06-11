@@ -1,7 +1,7 @@
-PHP Better Error Reporting
-==========================
+PHP Error | Improve Error Reporting for PHP
+===========================================
 
-PHP errors are not good enough for development, this aims to improve them.
+PHP errors are not good enough for development, it's as simple as that. This aims to solve this.
 
 ![Better Error Message](http://i.imgur.com/WdvX9.png)
 
@@ -20,7 +20,7 @@ Features
 Example Usage
 -------------
 
- * [Get the library](https://github.com/JosephLenton/PHP-Better-Error-Reporting/blob/master/src/better_error_reporting.php), it's just one file.
+ * [Get the library](https://github.com/JosephLenton/PHP-Error/blob/master/src/php_error.php), it's just one file.
  * Place it into your project.
  * import the file
  * call: \better_error_messages\reportErrors();
@@ -29,8 +29,8 @@ Example Usage
 
 ```php
 	<?
-		require( 'better_error_message.php' );
-		\better_error_message\reportErrors();
+		require( 'php_error.php' );
+		\php_error\reportErrors();
 	?>
 ```
 
