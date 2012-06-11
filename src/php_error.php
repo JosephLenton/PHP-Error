@@ -787,7 +787,7 @@
 
         private $defaultErrorReportingOn;
         private $defaultErrorReportingOff;
-        private $documentRoot;
+        private $applicationRoot;
         private $serverName;
 
         private $catchClassNotFound;
@@ -812,7 +812,7 @@
          *  - error_reporting_off       value for when errors are off, defaults to php.ini's error_reporting.
          * 
          *  = Setup details =
-         *  - document_root             When it's working out hte stack trace, this is the root folder of the application, to use as it's base.
+         *  - application_root          When it's working out hte stack trace, this is the root folder of the application, to use as it's base.
          *                              Defaults to the servers root directory.
          * 
          *                              A relative path can be given, but lets be honest, an explicit path is the way to guarantee that you
@@ -822,7 +822,7 @@
          * 
          *  - ignore_folders            This is allows you to highlight non-framework code in a stack trace.
          *                              An array of folders to ignore, when working out the stack trace.
-         *                              This is folder prefixes in relation to the document_root, whatever that might be.
+         *                              This is folder prefixes in relation to the application_root, whatever that might be.
          *                              They are only ignored if there is a file found outside of them.
          *                              If you still don't get what this does, don't worry, it's here cos I use it.
          * 
@@ -872,13 +872,13 @@
              * Relative paths might be given for document root,
              * so we make it explicit.
              */
-            $this->documentRoot             = BetterErrorsReporter::optionsPop( $options, 'document_root', $_SERVER['DOCUMENT_ROOT'] );
-            $dir = null;
-            $dir = @realpath( $this->documentRoot );
-            if ( $dir === null || $dir === false ) {
-                throw new Exception("Document root not found: " . $this->documentRoot);
+            $this->applicationRoot          = BetterErrorsReporter::optionsPop( $options, 'application_root', $_SERVER['DOCUMENT_ROOT'] );
+            $dir = false;
+            $dir = @realpath( $this->applicationRoot );
+            if ( $dir === false ) {
+                throw new Exception("Document root not found: " . $this->applicationRoot);
             } else {
-                $this->documentRoot =  str_replace( '\\', '/', $dir );
+                $this->applicationRoot =  str_replace( '\\', '/', $dir );
             }
 
             $this->serverName               = BetterErrorsReporter::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME'] );
@@ -1555,7 +1555,7 @@
          * The entry point for handling an error.
          */
         public function reportError( $code, $message, $errLine, $errFile, $stackTrace=null, $ex=null ) {
-            $root = $this->documentRoot;
+            $root = $this->applicationRoot;
 
             list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
                     $this->improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, $stackTrace );
@@ -1661,9 +1661,9 @@
          * This outputs the error details in HTML.
          */
         private function displayError( $message, $errLine, $errFile, $stackTrace, &$fileLines ) {
-            $documentRoot   = $this->documentRoot;
-            $serverName     = $this->serverName;
-            $backgroundText = $this->backgroundText;
+            $applicationRoot = $this->applicationRoot;
+            $serverName      = $this->serverName;
+            $backgroundText  = $this->backgroundText;
             
             \php_error\displayHTML(
                     // pre, in the head
@@ -1676,7 +1676,7 @@
 
                     // the content
                     function() use (
-                            $backgroundText, $serverName, $documentRoot,
+                            $backgroundText, $serverName, $applicationRoot,
                             $message, $errLine, $errFile, $stackTrace, &$fileLines
                     ) {
                         if ( $backgroundText ) { ?>
@@ -1684,7 +1684,7 @@
                                 <div id="error-back"><?= $backgroundText ?></div>
                             </div>
                         <? } ?>
-                        <h2 id="error-file-root"><?= $serverName ?> | <?= $documentRoot ?></h2>
+                        <h2 id="error-file-root"><?= $serverName ?> | <?= $applicationRoot ?></h2>
                         <h1 id="error-title"><?= $message ?></h1>
                         <h2 id="error-file" class="<?= $fileLines ? 'has_code' : '' ?>"><?= $errFile ?>, <?= $errLine ?></h2>
                         <? if ( $fileLines ) { ?>
