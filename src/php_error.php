@@ -140,7 +140,7 @@
          * 
          * So '9' will be the error line + 4 lines above + 4 lines below.
          */
-        const NUM_FILE_LINES = 7;
+        const NUM_FILE_LINES = 8;
 
         const FILE_TYPE_APPLICATION = 1;
         const FILE_TYPE_IGNORE = 2;
@@ -797,6 +797,7 @@
         private $catchSurpressedErrors;
 
         private $backgroundText;
+        private $numLines;
 
         /**
          * = Options =
@@ -819,6 +820,9 @@
          * 
          *                              A relative path can be given, but lets be honest, an explicit path is the way to guarantee that you
          *                              will get the path you want. My relative might not be the same as your relative.
+         * 
+         *  - snippet_num_lines         The number of lines to display in the code snippet, this defaults to 8. That includes the line being
+         *                              reported.
          * 
          *  - server_name               The name for this server, defaults to "$_SERVER['SERVER_NAME']"
          * 
@@ -887,6 +891,7 @@
             $this->catchClassNotFound       = BetterErrorsReporter::optionsPop( $options, 'catch_class_not_found' , true );
             $this->catchSurpressedErrors    = BetterErrorsReporter::optionsPop( $options, 'catch_supressed_errors', false );
             $this->backgroundText           = BetterErrorsReporter::optionsPop( $options, 'background_text', '' );
+            $this->numLines                 = BetterErrorsReporter::optionsPop( $options, 'snippet_num_lines', BetterErrorsReporter::NUM_FILE_LINES );
 
             if ( $options ) {
                 foreach ( $options as $key => $val ) {
@@ -1050,7 +1055,7 @@
                 $lines = $this->getFileContents( $errFile );
 
                 if ( $lines ) {
-                    $numLines = BetterErrorsReporter::NUM_FILE_LINES;
+                    $numLines = $this->numLines;
 
                     /*
                      * This ensures we attempt to always get NUM_FILE_LINES
@@ -1962,11 +1967,11 @@
                         border-radius: 2px;
                     }
                     .highlight {
-                        background: #391818;
+                        background: #391414;
                         border-radius: 2px;
                     }
                     .highlight.select-highlight {
-                        background: #492424;
+                        background: #421814;
                         border-radius: 2px;
                     }
             <?
