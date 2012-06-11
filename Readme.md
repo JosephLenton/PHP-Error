@@ -11,10 +11,10 @@ Features
 --------
  * trivial to use, it's just one file
  * makes errors as strict as possible (encourages code quality, and tends to improve performance)
- * provides more information
- * fixes some errors which are just plain wrong
+ * code snippets across the whole stack trace
+ * provides more information (such as full function signatures)
+ * fixes some error messages which are just plain wrong
  * syntax highlighting
- * provides code snippets
  * looks pretty!
 
 Example Usage
