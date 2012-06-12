@@ -1501,9 +1501,11 @@
                             }
 
                             $trace['html_file'] = "<span class='$klass'>$file</span>";
+                            $trace['is_native'] = false;
                         } else {
                             $file = '[internal function]';
                             $trace['html_file'] = "<span class='file-internal'>$file</span>";
+                            $trace['is_native'] = true;
                         }
 
                         $trace['file'] = $file;
@@ -1541,7 +1543,9 @@
                                 "$line    $file    $info" :
                                 "$line    $file" ;
 
-                        if ( $highlightI === $i ) {
+                        if ( $trace['is_native'] ) {
+                            $cssClass = 'is-native';
+                        } else if ( $highlightI === $i ) {
                             $cssClass = 'highlight';
                         } else if ( $highlightI > $i ) {
                             $cssClass = 'pre-highlight';
@@ -1783,15 +1787,18 @@
                                                 var $this = $(this);
 
                                                 if ( ! $this.hasClass('select-highlight') ) {
-                                                    var lineID = $this.data( 'file-lines-id' );
-
                                                     $this.addClass( 'select-highlight' );
-                                                    if ( lineID ) {
-                                                        var nextLines = lines.filter( '#'+lineID );
 
-                                                        if ( ! nextLines.is('.show') ) {
-                                                            lines.filter('.show').removeClass( 'show' );
-                                                            nextLines.addClass( 'show' );
+                                                    if ( ! $this.hasClass('is-native') ) {
+                                                        var lineID = $this.data( 'file-lines-id' );
+
+                                                        if ( lineID ) {
+                                                            var nextLines = lines.filter( '#'+lineID );
+
+                                                            if ( ! nextLines.is('.show') ) {
+                                                                lines.filter('.show').removeClass( 'show' );
+                                                                nextLines.addClass( 'show' );
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1804,7 +1811,7 @@
                                             click( function() {
                                                 var $this = $(this);
 
-                                                if ( ! $this.hasClass('highlight') ) {
+                                                if ( ! $this.hasClass('highlight') && !$this.hasClass('is-native') ) {
                                                     $( '.error-stack-trace-line.highlight' ).removeClass( 'highlight' );
 
                                                     $this.addClass( 'highlight' );
@@ -1895,17 +1902,40 @@
                 font: 24px consolas;
                 margin-top: 0;
             }
-            #error-stack-trace {
-                font: 18px consolas;
-                line-height: 28px;
-                white-space: pre;
 
-                cursor: pointer;
+            <?
+             /*
+             * Error Background Text.
+             */
+            ?>
+            #error-wrap {
+                right: 0;
+                top: 0;
+                position: absolute;
+                overflow: hidden;
+
+                z-index: -1;
+                width: 100%;
+                height: 100%;
             }
-                .error-stack-trace-line {
-                    padding: 3px 9px;
-                    margin-left: -9px;
-                }
+            #error-back {
+                font: 240px consolas;
+                color: #211600;
+                position: absolute;
+                top: 60px;
+                right: -80px;
+
+                -webkit-transform: rotate( 24deg );
+                   -moz-transform: rotate( 24deg );
+                    -ms-transform: rotate( 24deg );
+                     -o-transform: rotate( 24deg );
+                        transform: rotate( 24deg );
+            }
+            <?
+            /*
+             * Code Snippets at the top
+             */
+            ?>
             #error-file.has_code {
                 margin: 36px 0 -6px 128px;
             }
@@ -1949,35 +1979,60 @@
                         min-height: 20px;
                         padding-right: 18px;
                         padding-bottom: 1px;
-                    }
-                    .pre-highlight,
-                    .highlight {
-                        width: 100%;
-                        color: #eee;
-                    }
-                    .pre-highlight {
-                        opacity: 0.3;
-                        color: #999 !important;
-                    }
-                        .pre-highlight span {
-                            color: #999 !important;
-                            border: none !important;
-                        }
-                    .select-highlight {
-                        background: #241010;
-                        border-radius: 2px;
-                    }
-                    .highlight {
-                        background: #391414;
-                        border-radius: 2px;
-                    }
-                    .highlight.select-highlight {
-                        background: #421814;
+
                         border-radius: 2px;
                     }
             <?
             /*
-             * Syntax Highlighting Classes
+             * Stack Trace
+             */
+            ?>
+            #error-stack-trace {
+                font: 18px consolas;
+                line-height: 28px;
+                white-space: pre;
+
+                cursor: pointer;
+            }
+                .error-stack-trace-line {
+                    padding: 3px 9px;
+                    margin-left: -9px;
+                    border-radius: 2px;
+                }
+            <?
+            /*
+             * Code and Stack highlighting colours
+             */
+            ?>
+            .pre-highlight,
+            .highlight {
+                width: 100%;
+                color: #eee;
+            }
+            .pre-highlight {
+                opacity: 0.3;
+                color: #999 !important;
+            }
+                .pre-highlight span {
+                    color: #999 !important;
+                    border: none !important;
+                }
+            .select-highlight {
+                background: #261313;
+            }
+            .select-highlight.is-native {
+                background: #222;
+            }
+            .highlight {
+                background: #391414;
+            }
+            .highlight.select-highlight {
+                background: #451915;
+            }
+
+            <?
+            /*
+             * Syntax Highlighting
              */
             ?>
             .syntax-class {
@@ -2009,6 +2064,11 @@
                 color: #5a5a5a;
             }
 
+            <?
+            /*
+             * File Highlighting
+             */
+            ?>
             .file-internal {
                 color: #555;
             }
@@ -2023,31 +2083,6 @@
             }
             .file-root {
                 color: #b69;
-            }
-
-            #error-wrap {
-                right: 0;
-                top: 0;
-                position: absolute;
-                overflow: hidden;
-
-                z-index: -1;
-                width: 100%;
-                height: 100%;
-            }
-
-            #error-back {
-                font: 240px consolas;
-                color: #211600;
-                position: absolute;
-                top: 60px;
-                right: -80px;
-
-                -webkit-transform: rotate( 24deg );
-                   -moz-transform: rotate( 24deg );
-                    -ms-transform: rotate( 24deg );
-                     -o-transform: rotate( 24deg );
-                        transform: rotate( 24deg );
             }
         </style><?
 
