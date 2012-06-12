@@ -28,7 +28,7 @@ Example Usage
  * profit! \o/
 
 ```php
-	<?
+	<?php
 		require( 'php_error.php' );
 		\php_error\reportErrors();
 	?>
