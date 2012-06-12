@@ -39,7 +39,8 @@
      * a live website. It should *ONLY* be used for development.
      * 
      * PHP Error will kill your environment at will, clear the output
-     * buffers, and allows HTML injection from exception and other places.
+     * buffers, and allows HTML injection from exceptions.
+     * 
      * In future versions it plans to do far more then that.
      * 
      * If you use it in development, awesome! If you use it in production,
@@ -93,6 +94,24 @@
     $_php_error_global_handler = null;
 
     /**
+     * This is shorthand for turning off error handling,
+     * calling a block of code, and then turning it on.
+     * 
+     * However if 'reportErrors' has not been called,
+     * then this will silently do nothing.
+     * 
+     * @param callback A PHP function to call.
+     * @return The result of calling the callback.
+     */
+    function withoutErrors( $callback ) {
+        if ( $_php_error_global_handler !== null ) {
+            return $_php_error_global_handler->withoutErrors( $callback );
+        } else {
+            return $callback();
+        }
+    }
+
+    /**
      * Turns on error reporting, and returns the handler.
      * 
      * If you just want error reporting on, then don't bother
@@ -122,6 +141,8 @@
      */
     class BetterErrorsReporter
     {
+        const JS_COMMUNICATION_NAME = '_php_error_js_internal_communication_name_';
+
         const REGEX_PHP_IDENTIFIER = '\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*';
 
         /**
@@ -144,7 +165,7 @@
         const NUM_FILE_LINES = 8;
 
         const FILE_TYPE_APPLICATION = 1;
-        const FILE_TYPE_IGNORE = 2;
+        const FILE_TYPE_IGNORE      = 2;
 
         /**
          * At the time of writing, scalar type hints are unsupported.
@@ -156,7 +177,8 @@
         private static $IS_SCALAR_TYPE_HINTING_SUPPORTED = false;
 
         private static $SCALAR_TYPES = array(
-                'string', 'integer', 'float', 'boolean', 'int', 'number'
+                'string', 'integer', 'float', 'boolean',
+                'bool', 'int', 'number'
         );
 
         /**
@@ -794,11 +816,16 @@
         private $serverName;
 
         private $catchClassNotFound;
-
         private $catchSurpressedErrors;
+        private $catchAjaxErrors;
 
         private $backgroundText;
         private $numLines;
+
+        private $ajaxGetName;
+
+        private $bufferOutput;
+        private $isInEndBuffer;
 
         /**
          * = Options =
@@ -810,6 +837,7 @@
          *  = Types of errors this will / won't catch =
          *  - catch_class_not_found     When true, calling the class autoloader in PHP will throw an error. This defaults to true.
          *  - catch_supressed_errors    The @ supresses errors. However if this is set to true, then they are still reported. Defaults to false.
+         *  - catch_ajax_errors         When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors. Defaults to true.
          * 
          *  = Error reporting level =
          *  - error_reporting_on        value for when errors are on, defaults to all errors
@@ -839,6 +867,10 @@
          *  - background_text           The text that appeares in the background. By default this is blank.
          *                              Why? You can replace this with the name of your framework, for extra customization spice.
          * 
+         *  - ajax_get_name             When the runtime talks to this script, it will use this to say it's talking.
+         *                              By default this is the GET parameter '_php_error_js_internal_communication_name_'.
+         *                              If that happens to clash (how???), then you can redefine it with this option.
+         * 
          * @param options Optional, an array of values to customize this handler.
          * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
          * @throws Exception 
@@ -847,7 +879,7 @@
             // there can only be one to rule them all
             global $_php_error_global_handler;
             if ( $_php_error_global_handler !== null ) {
-                throw new Exception( "there can only ever be one error reporter!" );
+                throw new Exception( "There can only be one! Attempting to create a duplicate error reporter." );
             }
             $_php_error_global_handler = $this;
 
@@ -862,12 +894,12 @@
              * They are removed one by one, and any left, will raise an error.
              */
 
-            $ignoreFolders = BetterErrorsReporter::optionsPop( $options, 'ignore_folders' , null );
+            $ignoreFolders                  = BetterErrorsReporter::optionsPop( $options, 'ignore_folders'     , null );
+            $appFolders                     = BetterErrorsReporter::optionsPop( $options, 'application_folders', null );
+
             if ( $ignoreFolders !== null ) {
                 $this->setFolders( $this->ignoreFolders, $this->ignoreFoldersLongest, $ignoreFolders );
             }
-
-            $appFolders = BetterErrorsReporter::optionsPop( $options, 'application_folders' , null );
             if ( $appFolders !== null ) {
                 $this->setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
             }
@@ -875,11 +907,13 @@
             $this->defaultErrorReportingOn  = BetterErrorsReporter::optionsPop( $options, 'error_reporting_on' , -1 );
             $this->defaultErrorReportingOff = BetterErrorsReporter::optionsPop( $options, 'error_reporting_off', error_reporting() );
 
+            $this->applicationRoot          = BetterErrorsReporter::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
+            $this->serverName               = BetterErrorsReporter::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
+
             /*
              * Relative paths might be given for document root,
              * so we make it explicit.
              */
-            $this->applicationRoot          = BetterErrorsReporter::optionsPop( $options, 'application_root', $_SERVER['DOCUMENT_ROOT'] );
             $dir = false;
             $dir = @realpath( $this->applicationRoot );
             if ( $dir === false ) {
@@ -888,18 +922,33 @@
                 $this->applicationRoot =  str_replace( '\\', '/', $dir );
             }
 
-            $this->serverName               = BetterErrorsReporter::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME'] );
-            $this->catchClassNotFound       = BetterErrorsReporter::optionsPop( $options, 'catch_class_not_found' , true );
+            $this->catchClassNotFound       = BetterErrorsReporter::optionsPop( $options, 'catch_class_not_found' , true  );
             $this->catchSurpressedErrors    = BetterErrorsReporter::optionsPop( $options, 'catch_supressed_errors', false );
+            $this->catchAjaxErrors          = BetterErrorsReporter::optionsPop( $options, 'catch_ajax_errors'     , true  );
+
             $this->backgroundText           = BetterErrorsReporter::optionsPop( $options, 'background_text', '' );
-            $this->numLines                 = BetterErrorsReporter::optionsPop( $options, 'snippet_num_lines', BetterErrorsReporter::NUM_FILE_LINES );
+            $this->numLines                 = BetterErrorsReporter::optionsPop( $options, 'snippet_num_lines'     , BetterErrorsReporter::NUM_FILE_LINES        );
+            $this->ajaxGetName              = BetterErrorsReporter::optionsPop( $options, 'ajax_get_name'         , BetterErrorsReporter::JS_COMMUNICATION_NAME );
+            if ( ! $this->ajaxGetName || ! is_string($this->ajaxGetName) ) {
+                throw new InvalidArgumentException( "Null or non-string ajax_get_name provided" );
+            }
 
             if ( $options ) {
                 foreach ( $options as $key => $val ) {
                     throw new InvalidArgumentException( "Unknown option given $key" );
                 }
             }
+
+            $this->bufferOutput  = '';
+            $this->isInEndBuffer = false;
+            $this->startBuffer();
         }
+
+        /*
+         * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+         * Public Functions
+         * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+         */
 
         /**
          * @return true if this is currently on, false if not.
@@ -960,6 +1009,7 @@
          * turned off.
          * 
          * @param callback A PHP function to call.
+         * @return The result of calling the callback.
          */
         public function withoutErrors( $callback ) {
             if ( ! is_callable($callback) ) {
@@ -967,10 +1017,112 @@
             }
 
             $this->turnOff();
-            $callback();
+            $result = $callback();
             $this->turnOn();
 
-            return $this;
+            return $result;
+        }
+        
+        /**
+         * This is the shutdown function, which should *only* be called 
+         * via 'register_shutdown_function'.
+         * 
+         * It's exposed because it has to be exposed.
+         */
+        public function __onShutdown() {
+            if ( $this->isOn() ) {
+                $error = error_get_last();
+
+                // fatal and syntax errors
+                if (
+                        $error && (
+                                $error['type'] === 1 ||
+                                $error['type'] === 4
+                        )
+                ) {
+                    $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
+                } else {
+                    $this->endBuffer();
+                }
+            }
+        }
+
+        /*
+         * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+         * Private Functions
+         * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+         */
+
+        /**
+         * This is intended to be used closely with 'onShutdown'.
+         * 
+         * This ensures that output_buffering is turned on.
+         */
+        private function startBuffer() {
+            /*
+             * Ensure output bufferring is on, cos we will need it laterz.
+             * 
+             * We also pass on any existing content, so it doesn't get lost.
+             */
+            if ( $this->catchAjaxErrors ) {
+                ini_set( 'implicit_flush', false );
+                ob_implicit_flush( false );
+
+                if ( ! ini_get('output_buffering') ) {
+                    ini_set('output_buffering', 1);
+                }
+
+                $output = '';
+                $inEndBuffer = false;
+                $this->bufferOutput  = &$output;
+                $this->isInEndBuffer = &$inEndBuffer;
+
+                ob_start( function($string) use (&$output, &$inEndBuffer) {
+                    if ( $inEndBuffer ) {
+                        $output = $string;
+                        return '';
+                    } else {
+                        return $string;
+                    }
+                });
+            }
+        }
+
+        /**
+         * This expects 'startBuffer' to have been called,
+         * to ensure that 'output buffering' is already turned on.
+         * 
+         * This will inject JS into the output, before it is done.
+         */
+        private function endBuffer() {
+            if ( $this->catchAjaxErrors ) {
+                $content  = ob_get_contents();
+                $handlers = ob_list_handlers();
+
+                $this->isInEndBuffer = true;
+                for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
+                    $handler = $handlers[$i];
+
+                    if (
+                            $handler === 'ob_gzhandler' ||
+                            $handler === 'default output handler'
+                    ) {
+                        ob_end_clean();
+                    } else {
+                        ob_end_flush();
+                    }
+                }
+                $this->isInEndBuffer = false;
+
+                if ( $this->bufferOutput ) {
+                    $content = $this->bufferOutput;
+                }
+
+                ob_start('ob_gzhandler');
+                
+                $this->displayJSInjection();
+                echo $content;
+            }
         }
 
         private function isApplicationFolder( $file ) {
@@ -1688,24 +1840,18 @@
                     }
 
                     register_shutdown_function( function() use ( $self ) {
-                        if ( $self->isOn() ) {
-                            $error = error_get_last();
-
-                            // fatal and syntax errors
-                            if (
-                                    $error && (
-                                            $error['type'] === 1 ||
-                                            $error['type'] === 4
-                                    )
-                            ) {
-                                $self->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
-                            }
-                        }
+                        $self->__onShutdown();
                     });
 
                     $self->isShutdownRegistered = true;
                 }
             }
+        }
+
+        private function displayJSInjection() {
+            ?><script>
+                window.foo = 'blah';
+            </script><?
         }
 
         /**
