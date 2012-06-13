@@ -188,12 +188,12 @@
         private static $PHP_SYMBOL_MAPPINGS = array(
                 '$end'                          => 'end of file',
                 'T_ABSTRACT'                    => 'abstract',
-                'T_AND_EQUAL'                   => '&=',
+                'T_AND_EQUAL'                   => "'&='",
                 'T_ARRAY'                       => 'array',
                 'T_ARRAY_CAST'                  => 'array cast',
-                'T_AS'                          => 'as',
-                'T_BOOLEAN_AND'                 => '&&',
-                'T_BOOLEAN_OR'                  => '||',
+                'T_AS'                          => "'as'",
+                'T_BOOLEAN_AND'                 => "'&&'",
+                'T_BOOLEAN_OR'                  => "'||'",
                 'T_BOOL_CAST'                   => 'boolean cast',
                 'T_BREAK'                       => 'break',
                 'T_CASE'                        => 'case',
@@ -202,26 +202,27 @@
                 'T_CLASS_C'                     => '__CLASS__',
                 'T_CLONE'                       => 'clone',
                 'T_CLOSE_TAG'                   => 'closing PHP tag',
-                'T_CONCAT_EQUAL'                => '.=',
+                'T_CONCAT_EQUAL'                => "'.='",
                 'T_CONST'                       => 'const',
                 'T_CONSTANT_ENCAPSED_STRING'    => 'string',
                 'T_CONTINUE'                    => 'continue',
-                'T_CURLY_OPEN'                  => '{$',
-                'T_DEC'                         => '-- decrement',
+                'T_CURLY_OPEN'                  => '\'{$\'',
+                'T_DEC'                         => '-- (decrement)',
                 'T_DECLARE'                     => 'declare',
                 'T_DEFAULT'                     => 'default',
                 'T_DIR'                         => '__DIR__',
-                'T_DIV_EQUAL'                   => '/=',
+                'T_DIV_EQUAL'                   => "'/='",
                 'T_DNUMBER'                     => 'number',
-                'T_DOLLAR_OPEN_CURLY_BRACES'    => '${',
-                'T_DO'                          => 'do',
-                'T_DOUBLE_ARROW'                => '=>',
+                'T_DOLLAR_OPEN_CURLY_BRACES'    => '\'${\'',
+                'T_DO'                          => "'do'",
+                'T_DOUBLE_ARROW'                => "'=>'",
                 'T_DOUBLE_CAST'                 => 'double cast',
-                'T_DOUBLE_COLON'                => '::',
+                'T_DOUBLE_COLON'                => "'::'",
                 'T_ECHO'                        => 'echo',
                 'T_ELSE'                        => 'else',
                 'T_ELSEIF'                      => 'elseif',
                 'T_EMPTY'                       => 'empty',
+                'T_ENCAPSED_AND_WHITESPACE'     => 'non-terminated string',
                 'T_ENDDECLARE'                  => 'enddeclare',
                 'T_ENDFOR'                      => 'endfor',
                 'T_ENDFOREACH'                  => 'endforeach',
@@ -242,41 +243,42 @@
                 'T_HALT_COMPILER'               => '__halt_compiler',
                 'T_IF'                          => 'if',
                 'T_IMPLEMENTS'                  => 'implements',
-                'T_INC'                         => '++ increment',
+                'T_INC'                         => '++ (increment)',
                 'T_INCLUDE'                     => 'include',
                 'T_INCLUDE_ONCE'                => 'include_once',
                 'T_INSTANCEOF'                  => 'instanceof',
                 'T_INT_CAST'                    => 'int cast',
                 'T_INTERFACE'                   => 'interface',
                 'T_ISSET'                       => 'isset',
-                'T_IS_EQUAL'                    => '==',
-                'T_IS_GREATER_OR_EQUAL'         => '>=',
-                'T_IS_IDENTICAL'                => '===',
-                'T_IS_NOT_EQUAL'                => '!= or <>',
-                'T_IS_NOT_IDENTICAL'            => '!==',
-                'T_IS_SMALLER_OR_EQUAL'         => '<=',
+                'T_IS_EQUAL'                    => "'=='",
+                'T_IS_GREATER_OR_EQUAL'         => "'>='",
+                'T_IS_IDENTICAL'                => "'==='",
+                'T_IS_NOT_EQUAL'                => "'!=' or '<>'",
+                'T_IS_NOT_IDENTICAL'            => "'!=='",
+                'T_IS_SMALLER_OR_EQUAL'         => "'<='",
                 'T_LINE'                        => '__LINE__',
                 'T_LIST'                        => 'list',
                 'T_LNUMBER'                     => 'number',
-                'T_LOGICAL_AND'                 => 'and',
-                'T_LOGICAL_OR'                  => 'or',
-                'T_LOGICAL_XOR'                 => 'xor',
+                'T_LOGICAL_AND'                 => "'and'",
+                'T_LOGICAL_OR'                  => "'or'",
+                'T_LOGICAL_XOR'                 => "'xor'",
                 'T_METHOD_C'                    => '__METHOD__',
-                'T_MINUS_EQUAL'                 => '-=',
-                'T_MOD_EQUAL'                   => '%=',
-                'T_MUL_EQUAL'                   => '*=',
+                'T_MINUS_EQUAL'                 => "'-='",
+                'T_MOD_EQUAL'                   => "'%='",
+                'T_MUL_EQUAL'                   => "'*='",
                 'T_NAMESPACE'                   => 'namespace',
-                'T_NS_C'                        => '__NAMESPACE__',
-                'T_NS_SEPARATOR'                => '/ namespace seperator',
                 'T_NEW'                         => 'new',
+                'T_NUM_STRING'                  => 'array index in a string',
+                'T_NS_C'                        => '__NAMESPACE__',
+                'T_NS_SEPARATOR'                => 'namespace seperator',
                 'T_OBJECT_CAST'                 => 'object cast',
-                'T_OBJECT_OPERATOR'             => '->',
+                'T_OBJECT_OPERATOR'             => "'->'",
                 'T_OLD_FUNCTION'                => 'old_function',
-                'T_OPEN_TAG'                    => '<?php or <?',
-                'T_OPEN_TAG_WITH_ECHO'          => '<?=',
-                'T_OR_EQUAL'                    => '|=',
-                'T_PAAMAYIM_NEKUDOTAYIM'        => '::',
-                'T_PLUS_EQUAL'                  => '+=',
+                'T_OPEN_TAG'                    => "'<?php' or '<?'",
+                'T_OPEN_TAG_WITH_ECHO'          => "'<?='",
+                'T_OR_EQUAL'                    => "'|='",
+                'T_PAAMAYIM_NEKUDOTAYIM'        => "'::'",
+                'T_PLUS_EQUAL'                  => "'+='",
                 'T_PRINT'                       => 'print',
                 'T_PRIVATE'                     => 'private',
                 'T_PUBLIC'                      => 'public',
@@ -284,11 +286,11 @@
                 'T_REQUIRE'                     => 'require',
                 'T_REQUIRE_ONCE'                => 'require_once',
                 'T_RETURN'                      => 'return',
-                'T_SL'                          => '<<',
-                'T_SL_EQUAL'                    => '<<=',
-                'T_SR'                          => '>>',
-                'T_SR_EQUAL'                    => '>>=',
-                'T_START_HEREDOC'               => '<<<',
+                'T_SL'                          => "'<<'",
+                'T_SL_EQUAL'                    => "'<<='",
+                'T_SR'                          => "'>>'",
+                'T_SR_EQUAL'                    => "'>>='",
+                'T_START_HEREDOC'               => "'<<<'",
                 'T_STATIC'                      => 'static',
                 'T_STRING'                      => 'string',
                 'T_STRING_CAST'                 => 'string cast',
@@ -301,7 +303,8 @@
                 'T_VAR'                         => 'var',
                 'T_VARIABLE'                    => 'variable',
                 'T_WHILE'                       => 'while',
-                'T_XOR_EQUAL'                   => '^='
+                'T_WHITESPACE'                  => 'whitespace',
+                'T_XOR_EQUAL'                   => "'^='"
         );
 
         private static $syntaxMap = array(
@@ -409,7 +412,7 @@
             if ( isset(BetterErrorsReporter::$PHP_SYMBOL_MAPPINGS[$symbol]) ) {
                 return BetterErrorsReporter::$PHP_SYMBOL_MAPPINGS[$symbol];
             } else {
-                return $symbol;
+                return "'$symbol'";
             }
         }
 
@@ -1424,29 +1427,33 @@
              * This swaps the 'T_WHATEVER' for the symbolic representation.
              */
             } else if ( $code === 4 ) {
-                $matches = array();
-                $num = preg_match( '/\bunexpected ([A-Z_]+|\\$end)\b/', $message, $matches );
+                if ( $message === "syntax error, unexpected T_ENCAPSED_AND_WHITESPACE" ) {
+                    $message = "syntax error, string is not closed";
+                } else {
+                    $matches = array();
+                    $num = preg_match( '/\bunexpected ([A-Z_]+|\\$end)\b/', $message, $matches );
 
-                if ( $num > 0 ) {
-                    $match = $matches[0];
-                    $newSymbol = BetterErrorsReporter::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
+                    if ( $num > 0 ) {
+                        $match = $matches[0];
+                        $newSymbol = BetterErrorsReporter::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
 
-                    $message = str_replace( $match, "unexpected '$newSymbol'", $message );
-                }
-
-                $matches = array();
-                $num = preg_match( '/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches );
-
-                if ( $num > 0 ) {
-                    $match = $matches[0];
-                    $newMatch = str_replace( ", expecting ", '', $match );
-                    $symbols = explode( ' or ', $newMatch );
-                    foreach ( $symbols as $i => $sym ) {
-                        $symbols[$i] = "'" . BetterErrorsReporter::phpSymbolToDescription( $sym ) . "'";
+                        $message = str_replace( $match, "unexpected $newSymbol", $message );
                     }
-                    $newMatch = join( ' or ', $symbols );
 
-                    $message = str_replace( $match, ", expecting $newMatch", $message );
+                    $matches = array();
+                    $num = preg_match( '/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches );
+
+                    if ( $num > 0 ) {
+                        $match = $matches[0];
+                        $newMatch = str_replace( ", expecting ", '', $match );
+                        $symbols = explode( ' or ', $newMatch );
+                        foreach ( $symbols as $i => $sym ) {
+                            $symbols[$i] = BetterErrorsReporter::phpSymbolToDescription( $sym );
+                        }
+                        $newMatch = join( ', or ', $symbols );
+
+                        $message = str_replace( $match, ", expecting $newMatch", $message );
+                    }
                 }
             /**
              * Undefined Variable, add syntax highlighting and make variable from 'foo' too '$foo'.
@@ -2100,19 +2107,6 @@
 
                                                 if ( ! $this.hasClass('select-highlight') ) {
                                                     $this.addClass( 'select-highlight' );
-
-                                                    if ( ! $this.hasClass('is-native') ) {
-                                                        var lineID = $this.data( 'file-lines-id' );
-
-                                                        if ( lineID ) {
-                                                            var nextLines = lines.filter( '#'+lineID );
-
-                                                            if ( ! nextLines.is('.show') ) {
-                                                                lines.filter('.show').removeClass( 'show' );
-                                                                nextLines.addClass( 'show' );
-                                                            }
-                                                        }
-                                                    }
                                                 }
                                             }).
                                             mouseout( function(ev) {
@@ -2130,7 +2124,14 @@
 
                                                     var lineID = $this.data( 'file-lines-id' );
                                                     if ( lineID ) {
-                                                        currentID = '#' + lineID;
+                                                        var newCurrent = '#' + lineID;
+
+                                                        if ( newCurrent !== currentID ) {
+                                                            currentID = newCurrent;
+
+                                                            lines.removeClass( 'show' );
+                                                            lines.filter( currentID ).addClass( 'show' );
+                                                        }
                                                     }
                                                 }
                                             });
