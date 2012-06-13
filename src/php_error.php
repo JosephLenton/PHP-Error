@@ -206,12 +206,14 @@
                 'T_CONST'                       => 'const',
                 'T_CONSTANT_ENCAPSED_STRING'    => 'string',
                 'T_CONTINUE'                    => 'continue',
+                'T_CURLY_OPEN'                  => '{$',
                 'T_DEC'                         => '-- decrement',
                 'T_DECLARE'                     => 'declare',
                 'T_DEFAULT'                     => 'default',
                 'T_DIR'                         => '__DIR__',
                 'T_DIV_EQUAL'                   => '/=',
                 'T_DNUMBER'                     => 'number',
+                'T_DOLLAR_OPEN_CURLY_BRACES'    => '${',
                 'T_DO'                          => 'do',
                 'T_DOUBLE_ARROW'                => '=>',
                 'T_DOUBLE_CAST'                 => 'double cast',
@@ -1036,8 +1038,9 @@
                 // fatal and syntax errors
                 if (
                         $error && (
-                                $error['type'] === 1 ||
-                                $error['type'] === 4
+                                $error['type'] ===  1 ||
+                                $error['type'] ===  4 ||
+                                $error['type'] === 64
                         )
                 ) {
                     $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
@@ -1118,7 +1121,11 @@
                     $content = $this->bufferOutput;
                 }
 
-                ob_start('ob_gzhandler');
+                if ( ini_get('zlib.output_compression') ) {
+                    ob_start();
+                } else {
+                    ob_start('ob_gzhandler');
+                }
                 
                 $this->displayJSInjection();
                 echo $content;
@@ -1332,6 +1339,8 @@
                                 $message
                         );
                     }
+                } else if ( $message === 'Using $this when not in object context' ) {
+                    $message = 'Using <span class="syntax-variable">$this</span> outside object context';
                 } else if (
                     strpos($message, "Class ") !== false &&
                     strpos($message, "not found") !== false
@@ -1377,6 +1386,36 @@
                             list( $srcErrFile, $srcErrLine, $stackSearchI ) = $skipStackFirst( $stackTrace );
                         }
                     }
+                } else if (
+                        strpos($message, 'require(') === 0 ||
+                        strpos($message, 'include(') === 0
+                ) {
+                    $type = strpos($message, 'require(') === 0 ?
+                            'require' :
+                            'include' ;
+
+                    /*
+                     * We grab everything up to the first non-valid
+                     * file character.
+                     * 
+                     * This is to ensure we get the file name.
+                     */
+                    $left  = strpos( $message, '<' );
+                    $right = strpos( $message, '>' );
+                    $right = strpos( $message, '>', $right+1 );
+
+                    if ( $left !== false && $right !== false ) {
+                        // this is everything we are replacing
+                        $match = substr( $message, 0, $right+3 );
+
+                        // for building the new string, we remove the pointless HTML
+                        $newMatch = substr( $message, 0, $left );
+                        $newMatch = str_replace( "$type(", '', $newMatch );
+                        $newMatch = substr( $newMatch, 0, strlen($newMatch)-3 );
+
+                        $message  = str_replace( $match, "$type(<span class='syntax-string'>'$newMatch'</span>),", $message );
+                        $message  = str_replace( 'failed to open stream: No ', 'no ', $message);
+                    }
                 }
             /*
              * Unexpected symbol errors.
@@ -1396,13 +1435,18 @@
                 }
 
                 $matches = array();
-                $num = preg_match( '/, expecting ([A-Z_]+|\\$end)\b/', $message, $matches );
+                $num = preg_match( '/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches );
 
                 if ( $num > 0 ) {
                     $match = $matches[0];
-                    $newSymbol = BetterErrorsReporter::phpSymbolToDescription( str_replace(', expecting ', '', $match) );
+                    $newMatch = str_replace( ", expecting ", '', $match );
+                    $symbols = explode( ' or ', $newMatch );
+                    foreach ( $symbols as $i => $sym ) {
+                        $symbols[$i] = "'" . BetterErrorsReporter::phpSymbolToDescription( $sym ) . "'";
+                    }
+                    $newMatch = join( ' or ', $symbols );
 
-                    $message = str_replace( $match, ", expecting '$newSymbol'", $message );
+                    $message = str_replace( $match, ", expecting $newMatch", $message );
                 }
             /**
              * Undefined Variable, add syntax highlighting and make variable from 'foo' too '$foo'.
@@ -1720,6 +1764,20 @@
             }
         }
 
+        public function reportException( $ex ) {
+            $file = $ex->getFile();
+            $line = $ex->getLine();
+            $message = $ex->getMessage();
+
+            $trace = $ex->getTraceAsString();
+            $parts = explode( "\n", $trace );
+            $trace = "        " . join( "\n        ", $parts );
+
+            error_log( "$message \n           $file, $line \n$trace" );
+
+            $this->reportError( $ex->getCode(), $message, $line, $file, $ex->getTrace(), $ex );
+        }
+
         /**
          * The entry point for handling an error.
          */
@@ -1740,6 +1798,9 @@
             $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
             $this->displayError( $message, $srcErrLine, $errFile, $stackTrace, $fileLinesSets, $numFileLines );
+
+            // exit in order to end processing
+            exit(0);
         }
 
         private function generateFileLineSets( $srcErrFile, $srcErrLine, &$stackTrace ) {
@@ -1785,25 +1846,33 @@
             if ( $this->isOff() ) {
                 error_reporting( $this->defaultErrorReportingOff );
             } else {
+                $catchSurpressedErrors = &$this->catchSurpressedErrors;
                 $self = $this;
 
                 // all errors \o/ !
                 error_reporting( $this->defaultErrorReportingOn );
 
                 set_error_handler(
-                        function( $code, $message, $file, $line, $context ) use ( $self ) {
+                        function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
                             /*
                              * DO NOT! log the error.
                              * 
                              * Either it's thrown as an exception, and so logged by the exception handler,
                              * or we return false, and it's logged by PHP.
+                             * 
+                             * Also DO NOT! throw an exception, instead report it.
+                             * This is because if an operation raises both a user AND
+                             * fatal error (such as require), then the exception is
+                             * silently ignored.
                              */
                             if ( $self->isOn() ) {
                                 /*
                                  * When using an @, the error reporting drops to 0.
                                  */
-                                if ( error_reporting() !== 0 || $this->catchSurpressedErrors ) {
-                                    throw new ErrorToExceptionException( $code, $message, $file, $line, $context );
+                                if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
+                                    $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
+
+                                    $self->reportException( $ex );
                                 }
                             } else {
                                 return false;
@@ -1814,17 +1883,7 @@
 
                 set_exception_handler( function($ex) use ( $self ) {
                     if ( $self->isOn() ) {
-                        $file = $ex->getFile();
-                        $line = $ex->getLine();
-                        $message = $ex->getMessage();
-
-                        $trace = $ex->getTraceAsString();
-                        $parts = explode( "\n", $trace );
-                        $trace = "        " . join( "\n        ", $parts );
-
-                        error_log( "$message \n           $file, $line \n$trace" );
-
-                        $self->reportError( $ex->getCode(), $message, $line, $file, $ex->getTrace(), $ex );
+                        $self->reportException( $ex );
                     } else {
                         return false;
                     }
@@ -1850,7 +1909,114 @@
 
         private function displayJSInjection() {
             ?><script>
-                window.foo = 'blah';
+                (function( window ) {
+                    if ( window.XMLHttpRequest ) {
+                        var old = window.XMLHttpRequest;
+
+                        /*
+                         * Certain properties will error when read,
+                         * and which ones do vary from browser to browser.
+                         * 
+                         * I've found these in both Chrome and Firefox,
+                         * and where it differs.
+                         * 
+                         * So I just wrap in a try/catch, and hope it
+                         * doesn't error.
+                         */
+                        var copyProperties = function( src, dest, props ) {
+                            for ( var i = 0; i < props.length; i++ ) {
+                                try {
+                                    var prop = props[i];
+                                    dest[prop] = src[prop];
+                                } catch( ex ) { }
+                            }
+                        };
+
+                        var copyRequestProperties = function( src, dest, includeReadOnly ) {
+                            copyProperties( src, dest, [
+                                    'readyState',
+                                    'response',
+                                    'responseType',
+                                    'timeout',
+                                    'upload',
+                                    'withCredentials',
+
+                                    'mozBackgroundRequest',
+                                    'mozArrayBuffer',
+                                    'multipart'
+                            ]);
+
+                            if ( includeReadOnly ) {
+                                copyProperties( src, dest, [
+                                        'responseText',
+                                        'responseXML',
+                                        'status',
+                                        'statusText',
+                                        'channel'
+                                ]);
+                            }
+                        }
+
+                        var XMLHttpRequest = function() {
+                            var self = this,
+                                inner = new old();
+
+                            inner.onreadystatechange = function( state ) {
+                                copyRequestProperties( inner, self, true );
+
+                                if ( self.onreadystatechange ) {
+                                    self.onreadystatechange.apply( this, arguments );
+                                }
+                            };
+
+                            copyRequestProperties( inner, this, true );
+                            this.__innerXMLHttpRequest = inner;
+                        }
+                        XMLHttpRequest.prototype = {
+                            open: function() {
+                                copyRequestProperties( this, this.__innerXMLHttpRequest );
+                                return old.prototype.open.apply( this.__innerXMLHttpRequest, arguments );
+                            },
+                            abort: function() {
+                                copyRequestProperties( this, this.__innerXMLHttpRequest );
+                                return old.prototype.abort.apply( this.__innerXMLHttpRequest, arguments );
+                            },
+                            send: function() {
+                                copyRequestProperties( this, this.__innerXMLHttpRequest );
+                                return old.prototype.send.apply( this.__innerXMLHttpRequest, arguments );
+                            }
+                        };
+
+                        /*
+                         * Methods - includes non-standard methods
+                         */
+
+                        var wrapProperties = [
+                                // standard
+                                'getAllResponseHeaders',
+                                'getResponseHeader',
+                                'setRequestHeader',
+                                'overrideMimeType',
+
+                                // non-standard
+                                'sendAsBinary'
+                        ];
+
+                        for ( var k in wrapProperties ) {
+                            var prop = wrapProperties[k];
+
+                            (function(prop) {
+                                if ( old.prototype[prop] ) {
+                                    XMLHttpRequest.prototype[prop] = function() {
+                                        return this.__innerXMLHttpRequest[prop].apply( this.__innerXMLHttpRequest, arguments );
+                                    };
+                                }
+                            })( prop );
+                        }
+
+                        window.XMLHttpRequest = XMLHttpRequest;
+                    }
+                })( window );
             </script><?
         }
 
@@ -2024,6 +2190,8 @@
 
                 background: #111;
                 color: #f0f0f0;
+
+                tab-size: 4;
             }
 
             ::-moz-selection{background: #662039 !important; color: #fff !important; text-shadow: none;}
