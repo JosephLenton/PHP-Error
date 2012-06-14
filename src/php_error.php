@@ -1141,6 +1141,13 @@
             }
         }
 
+        /**
+         * Calls the given method on this object,
+         * captures it's output, and then returns it.
+         * 
+         * @param method The name of the method to call.
+         * @return All of the text outputted during the method call.
+         */
         private function getContent( $method ) {
             ob_start();
             $this->$method();
