@@ -5,14 +5,6 @@
 	\php_error\reportErrors();
 ?>
 <script>
-(function( window ) {
-	var c = window.console;
-	window.log = function() {
-		c.log.apply( c, arguments );
-	}
-})( window );
-</script>
-<script>
 /*! jQuery v1.7.2 jquery.com | jquery.org/license */
 /*!
  * jQuery JavaScript Library v1.7.2
@@ -8327,7 +8319,6 @@ if ( jQuery.support.ajax ) {
 								}
 							}
 						} catch( firefoxAccessException ) {
-window.log( 'kdkd' );
 							if ( !isAbort ) {
 								complete( -1, firefoxAccessException );
 							}
@@ -9421,8 +9412,8 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 <script>
 	$(document).ready( function() {
-		$.get( '/example/js_injection.php', function(str) {
-			console.log( 'SUCCESS! ' + str.length );
+		$.get( '/example/call_via_native.php', function(str) {
+			console.log('success!');
 		} );
 	});
 </script>
