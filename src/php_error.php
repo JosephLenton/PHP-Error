@@ -159,6 +159,8 @@
         const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
         const REGEX_METHOD_OR_FUNCTION     = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/';
 
+        const REGEX_VARIABLE = '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/';
+
         /**
          * The number of lines to take from the file,
          * where the error is reported. This is the number
@@ -1507,17 +1509,13 @@
              */
             } else if ( $code === 8 ) {
                 if (
-                    strpos($message, "Undefined variable") !== false
+                    strpos($message, "Undefined variable:") !== false
                 ) {
                     $matches = array();
-                    preg_match( '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $message, $matches );
+                    preg_match( BetterErrorsReporter::REGEX_VARIABLE, $message, $matches );
 
                     if ( count($matches) > 0 ) {
-                        $message = preg_replace(
-                                '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/',
-                                '<span class="syntax-variable">$' . $matches[0] . '</span>',
-                                $message
-                        );
+                        $message = 'Undefined variable <span class="syntax-variable">$' . $matches[0] . '</span>' ;
                     }
                 }
             /**
@@ -2100,7 +2098,7 @@
                                             iDoc.getElementById('ajax-close').onclick = function() {
                                                 if ( ! closed ) {
                                                     closed = true;
-                                                    
+
                                                     iframe.style.opacity = 0;
 
                                                     setTimeout( function() {
@@ -2348,6 +2346,39 @@
 
                         tab-size: 4;
                     }
+
+                ::-moz-selection{background: #662039 !important; color: #fff !important; text-shadow: none;}
+                ::selection {background: #662039 !important; color: #fff !important; text-shadow: none;} 
+
+                a,
+                .error-stack-trace-line {
+                    -webkit-transition: color 120ms linear, background 120ms linear;
+                       -moz-transition: color 120ms linear, background 120ms linear;
+                        -ms-transition: color 120ms linear, background 120ms linear;
+                         -o-transition: color 120ms linear, background 120ms linear;
+                            transition: color 120ms linear, background 120ms linear;
+                }
+
+                a,
+                a:visited,
+                a:hover,
+                a:active {
+                    color: #9ae;
+                    text-decoration: undefine;
+                }
+                a:hover {
+                    color: #aff;
+                }
+
+                h1 {
+                    font: 32px consolas;
+                    margin-bottom: 0;
+                }
+                h2 {
+                    font: 24px consolas;
+                    margin-top: 0;
+                }
+
                         .background {
                             background: #111;
                             width: 100%;
@@ -2371,7 +2402,7 @@
                     }
                         html.ajax > body > .background {
                             border-radius: 4px;
-                            box-shadow: 6px 6px 18px rgba( 0, 0, 0, 0.4 );
+                            box-shadow: 5px 8px 18px rgba( 0, 0, 0, 0.4 );
 
                             min-height: 0;
                         }
@@ -2388,7 +2419,7 @@
                         display: none;
                     }
                 #ajax-tab {
-                    padding: 7px 18px 5px 18px;
+                    padding: 0 18px;
 
                     left: 0;
                     top: 24px;
@@ -2400,46 +2431,31 @@
                 }
                 #ajax-close {
                     position: absolute;
-                    right: -14px;
-                    top: -17px;
-                    background: #733;
-                    padding: 6px 10px;
-                    color: white;
-                    font: 18px arial;
+                    right: -18px;
+                    top  : -18px;
+                    background: #622;
+
+                    color: #ccc;
+
+                    font: 21px arial;
+                    font-weight: 900;
+                    line-height: 38px;
+                    min-width  : 38px;
+                    text-align : center;
 
                     border-radius: 300px;
+                    box-shadow: 3px 3px 11px rgba(0,0,0,0.25);
+
                 }
                     #ajax-close:hover {
                         background: #944;
+                        color: #fff;
                     }
                 #ajax-close,
                 #ajax-close:visited,
                 #ajax-close:active,
                 #ajax-close:hover {
                     text-decoration: none;
-                }
-
-                ::-moz-selection{background: #662039 !important; color: #fff !important; text-shadow: none;}
-                ::selection {background: #662039 !important; color: #fff !important; text-shadow: none;} 
-
-                a,
-                a:visited,
-                a:hover,
-                a:active {
-                    color: #9ae;
-                    text-decoration: undefine;
-                }
-                a:hover {
-                    color: #aff;
-                }
-
-                h1 {
-                    font: 32px consolas;
-                    margin-bottom: 0;
-                }
-                h2 {
-                    font: 24px consolas;
-                    margin-top: 0;
                 }
 
                 <?
@@ -2535,8 +2551,9 @@
                     cursor: pointer;
                 }
                     .error-stack-trace-line {
-                        padding: 3px 9px;
-                        margin-left: -9px;
+                        width: 100%;
+                        padding: 3px 18px;
+                        margin-left: -18px;
                         border-radius: 2px;
                     }
                 <?
