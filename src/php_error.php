@@ -2041,6 +2041,13 @@
                                                 " width='100%'",
                                                 " height='100%'",
                                                 " style='",
+                                                        '-webkit-transition: opacity 200ms linear;',
+                                                        '-moz-transition: opacity 200ms linear;',
+                                                        '-ms-transition: opacity 200ms linear;',
+                                                        '-o-transition: opacity 200ms linear;',
+                                                        'transition: opacity 200ms linear;',
+                                                        'opacity: 0;',
+
                                                         'background:transparent;',
                                                         'position:fixed;',
                                                         'top:0;',
@@ -2087,28 +2094,27 @@
                                                 }
                                             }
 
+                                            var closed = false;
+
                                             // setup the close handler
                                             iDoc.getElementById('ajax-close').onclick = function() {
-                                                iframe.parentNode.removeChild(iframe);
+                                                if ( ! closed ) {
+                                                    closed = true;
+                                                    
+                                                    iframe.style.opacity = 0;
+
+                                                    setTimeout( function() {
+                                                        iframe.parentNode.removeChild( iframe );
+                                                    }, 220 );
+                                                }
                                                 return false;
                                             };
 
                                             var html = iDoc.getElementsByTagName('html')[0];
                                             html.setAttribute( 'class', 'ajax' );
-                                            html.style.opacity = 0;
 
-                                            var start = (new Date()).getTime(),
-                                                time = 150;
-                                            var t = setInterval( function() {
-                                                var now  = (new Date()).getTime(),
-                                                    diff = now-start;
-
-                                                if ( diff > time ) {
-                                                    html.style.opacity = 1;
-                                                    clearInterval( t );
-                                                } else {
-                                                    html.style.opacity = diff / time;
-                                                }
+                                            setTimeout( function() {
+                                                iframe.style.opacity = 1;
                                             }, 1 );
                                         }, 1 );
                                     }
