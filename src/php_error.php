@@ -146,6 +146,8 @@
     {
         const JS_COMMUNICATION_NAME = '_php_error_js_internal_communication_name_';
 
+        const REGEX_DOCTYPE = '/<( )*!( *)DOCTYPE([^>]+)>/';
+
         const REGEX_PHP_IDENTIFIER = '\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*';
 
         /**
@@ -169,6 +171,8 @@
 
         const FILE_TYPE_APPLICATION = 1;
         const FILE_TYPE_IGNORE      = 2;
+
+        const MAGIC_IS_PRETTY_ERRORS_MARKER = '<!-- __magic_php_error_is_a_stack_trace_constant__ -->';
 
         /**
          * At the time of writing, scalar type hints are unsupported.
@@ -1141,7 +1145,17 @@
                 $js = $this->getContent( 'displayJSInjection' );
                 $js = JSMin::minify( $js );
 
-                echo $js;
+                // attemp to inject the script into the HTML, after the doctype
+                $matches = array();
+                preg_match( BetterErrorsReporter::REGEX_DOCTYPE, $content, $matches );
+
+                if ( $matches ) {
+                    $doctype = $matches[0];
+                    $content = preg_replace( BetterErrorsReporter::REGEX_DOCTYPE, "$doctype $js", $content );
+                } else {
+                    echo $js;
+                }
+
                 echo $content;
             }
         }
@@ -1952,6 +1966,8 @@
 
         private function displayJSInjection() {
             ?><script data-php_error="magic JS, just ignore!">
+                "use strict";
+
                 (function( window ) {
                     if ( window.XMLHttpRequest ) {
                         var AJAX_COMMUNICATION_NAME = '<?= $this->ajaxGetName ?>';
@@ -2014,33 +2030,81 @@
                                 if (
                                         (state === 3 || state === 4 ) &&
                                         inner.responseText !== null &&
-                                        inner.responseText.indexOf('<html data-php_error=') !== -1
+                                        inner.responseText.indexOf( '<?= BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER ?>' ) !== -1
                                 ) {
                                     isProcessing = false;
 
                                     if ( state === 4 ) {
                                         var body = document.body;
-                                        var iframe = document.createElement('iframe');
+                                        var iframe = [
+                                                "<iframe ",
+                                                " width='100%'",
+                                                " height='100%'",
+                                                " style='",
+                                                        'background:transparent;',
+                                                        'position:fixed;',
+                                                        'top:0;',
+                                                        'left:0;',
+                                                        'right:0;',
+                                                        'bottom:0;',
+                                                "'",
+                                                ">",
+                                                '</iframe>'
+                                        ].join('');
 
-                                        iframe.style.position = 'fixed';
-                                        iframe.style.background = 'transparent';
-                                        iframe.style.top = '0';
-                                        iframe.style.left = '0';
-                                        iframe.style.right = '0';
-                                        iframe.style.bottom = '0';
-                                        iframe.setAttribute( 'width', '100%' );
-                                        iframe.setAttribute( 'height', '100%' );
+                                        var div = document.createElement('div');
+                                        div.innerHTML = iframe;
+                                        iframe = div.firstChild;
+                                        div.removeChild( iframe );
 
                                         var body = document.getElementsByTagName('body')[0];
                                         body.appendChild( iframe );
 
-                                        var iDoc = iframe.contentWindow || iframe.contentDocument;
-                                        if ( iDoc.document) {
-                                            iDoc = iDoc.document;
-                                        }
+                                        setTimeout( function() {
+                                            var iDoc = iframe.contentWindow || iframe.contentDocument;
+                                            if ( iDoc.document) {
+                                                iDoc = iDoc.document;
+                                            }
 
-                                        iDoc.getElementsByTagName("body")[0].innerHTML = inner.responseText;
-                                        iDoc.getElementsByTagName('html')[0].setAttribute( 'class', 'ajax' );
+                                            var iBody = iDoc.getElementsByTagName("body")[0];
+                                            iBody.innerHTML = inner.responseText;
+
+                                            var iHead = iDoc.getElementsByTagName("head")[0];
+
+                                            // re-run the script tags
+                                            var scripts = iDoc.getElementsByTagName('script');
+                                            for ( var i = 0; i < scripts.length; i++ ) {
+                                                var script = scripts[i];
+                                                var parent = script.parentNode;
+
+                                                if ( parent ) {
+                                                    parent.removeChild( script );
+
+                                                    var newScript = iDoc.createElement('script');
+                                                    newScript.innerHTML = script.innerHTML;
+
+                                                    iHead.appendChild( newScript );
+                                                }
+                                            }
+
+                                            var html = iDoc.getElementsByTagName('html')[0];
+                                            html.setAttribute( 'class', 'ajax' );
+                                            html.style.opacity = 0;
+
+                                            var start = (new Date()).getTime(),
+                                                time = 150;
+                                            var t = setInterval( function() {
+                                                var now  = (new Date()).getTime(),
+                                                    diff = now-start;
+
+                                                if ( diff > time ) {
+                                                    html.style.opacity = 1;
+                                                    clearInterval( t );
+                                                } else {
+                                                    html.style.opacity = diff / time;
+                                                }
+                                            }, 1 );
+                                        }, 1 );
                                     }
                                 }
                                 
@@ -2250,18 +2314,20 @@
             } catch ( Exception $ex ) { /* do nothing */ }
 
             echo '<!DOCTYPE html>';
-            echo '<html data-php_error="">';
+            echo BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER;
 
             if ( $head !== null ) {
                 $head();
             }
 
             ?><style>
-                html, body { margin: 0; padding: 0; }
+                html, body {
+                    margin: 0;
+                    padding: 0; 
+                    width: 100%;
+                    height: 100%;
+                }
                     body {
-                        width: 100%;
-                        height: 100%;
-
                         color: #f0f0f0;
 
                         tab-size: 4;
@@ -2269,7 +2335,7 @@
                         .background {
                             background: #111;
                             width: 100%;
-                            height: 100%;
+                            min-height: 100%;
 
                             padding: 16px 32px;
                             -moz-box-sizing: border-box;
@@ -2290,6 +2356,8 @@
                         html.ajax > body > .background {
                             border-radius: 4px;
                             box-shadow: 6px 6px 18px rgba( 0, 0, 0, 0.4 );
+
+                            min-height: 0;
                         }
 
                 #ajax-info {
