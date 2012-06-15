@@ -2087,6 +2087,12 @@
                                                 }
                                             }
 
+                                            // setup the close handler
+                                            iDoc.getElementById('ajax-close').onclick = function() {
+                                                iframe.parentNode.removeChild(iframe);
+                                                return false;
+                                            };
+
                                             var html = iDoc.getElementsByTagName('html')[0];
                                             html.setAttribute( 'class', 'ajax' );
                                             html.style.opacity = 0;
@@ -2236,6 +2242,10 @@
                             "use strict";
 
                             $(document).ready( function() {
+                                $('#ajax-close').click( function(ev) {
+                                    ev.preventDefault();
+                                });
+
                                 if ( $('#error-files').size() > 0 && $('#error-stack-trace').size() > 0 ) {
                                     var FADE_SPEED = 150,
                                         lines = $('#error-files .error-file-lines'),
@@ -2360,9 +2370,11 @@
                             min-height: 0;
                         }
 
+                #ajax-close,
                 #ajax-info {
                     display: none;
                 }
+                    html.ajax #ajax-close,
                     html.ajax #ajax-info {
                         display: block;
                     }
@@ -2376,10 +2388,29 @@
                     top: 24px;
 
                     color: #bbb;
-                    font: 18px arial;
-                    border-radius: 3px;
 
                     background: #359;
+                    border-radius: 3px;
+                }
+                #ajax-close {
+                    position: absolute;
+                    right: -14px;
+                    top: -17px;
+                    background: #733;
+                    padding: 6px 10px;
+                    color: white;
+                    font: 18px arial;
+
+                    border-radius: 300px;
+                }
+                    #ajax-close:hover {
+                        background: #944;
+                    }
+                #ajax-close,
+                #ajax-close:visited,
+                #ajax-close:active,
+                #ajax-close:hover {
+                    text-decoration: none;
                 }
 
                 ::-moz-selection{background: #662039 !important; color: #fff !important; text-shadow: none;}
@@ -2589,7 +2620,7 @@
                 }
             </style><?
 
-            ?><div class="background"><?
+            ?><div class="background"><a href="#" id="ajax-close">X</a><?
                 $body();
             ?></div><?
 
