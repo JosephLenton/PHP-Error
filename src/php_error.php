@@ -28,6 +28,10 @@
      * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
      * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
      * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+     * 
+     * Uses:
+     *      JSMin-php   https://github.com/rgrove/jsmin-php/
+     *      jQuery      http://jquery.com/
      */
 
     /**
@@ -155,6 +159,7 @@
         const REGEX_DOCTYPE = '/<( )*!( *)DOCTYPE([^>]+)>/';
 
         const REGEX_PHP_IDENTIFIER = '\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*';
+        const REGEX_PHP_CONST_IDENTIFIER = '/\b[A-Z_\x7f-\xff][A-Z0-9_\x7f-\xff]*/';
 
         /**
          * Matches:
@@ -163,7 +168,7 @@
          *  foo()
          */
         const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
-        const REGEX_METHOD_OR_FUNCTION     = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/';
+        const REGEX_METHOD_OR_FUNCTION     = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/' ;
 
         const REGEX_VARIABLE = '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/';
 
@@ -324,10 +329,11 @@
         );
 
         private static $syntaxMap = array(
+                'const'                       => 'syntax-literal',
+                'reference_ampersand'         => 'syntax-function',
+
                 T_COMMENT                     => 'syntax-comment',
                 T_DOC_COMMENT                 => 'syntax-comment',
-
-                'reference_ampersand'         => 'syntax-function',
 
                 T_ABSTRACT                    => 'syntax-keyword',
                 T_AS                          => 'syntax-keyword',
@@ -494,6 +500,13 @@
                     $inString = !$inString;
                 } else if ( $code === '->' ) {
                     $code = '-&gt;';
+                } else if ( $type === T_STRING ) {
+                    $matches = array();
+                    preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $code, $matches);
+
+                    if ( $matches && strlen($matches[0]) === strlen($code) ) {
+                        $type = 'const';
+                    }
                 }
 
                 if ( $skip ) {
@@ -1211,7 +1224,7 @@
             // it's this file : (
             if ( $file === __FILE__ ) {
                 $type = BetterErrorsReporter::FILE_TYPE_IGNORE;
-            } else if ( strpos('/', $testFile) === false ) {
+            } else if ( strpos($testFile, '/') === false ) {
                 $type = BetterErrorsReporter::FILE_TYPE_ROOT;
             } else if ( $this->isApplicationFolder($testFile) ) {
                 $type = BetterErrorsReporter::FILE_TYPE_APPLICATION;
@@ -1401,6 +1414,9 @@
                     }
                 } else if ( $message === 'Using $this when not in object context' ) {
                     $message = 'Using <span class="syntax-variable">$this</span> outside object context';
+                /*
+                 * Class not found error.
+                 */
                 } else if (
                     strpos($message, "Class ") !== false &&
                     strpos($message, "not found") !== false
@@ -1415,7 +1431,7 @@
 
                         $message = preg_replace(
                                 '/\'(\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)+\'/',
-                                "'<span class='syntax-class'>$className</span>'",
+                                "<span class='syntax-class'>$className</span>",
                                 $message
                         );
                     }
@@ -1598,7 +1614,14 @@
             }
 
             if ( $stackTrace !== null ) {
-                if (
+                $isEmpty = count( $stackTrace ) === 0 ;
+
+                if ( $isEmpty ) {
+                    array_unshift( $stackTrace, array(
+                            'line' => $errLine,
+                            'file' => $errFile
+                    ) );
+                } else if (
                         count($stackTrace) > 0 && (
                                 (! isset($stackTrace[0]['line'])) ||
                                 ($stackTrace[0]['line'] !== $errLine)
@@ -1610,7 +1633,7 @@
                     ) );
                 }
 
-                if ( $stackTrace ) {
+                if ( $stackTrace && !$isEmpty ) {
                     $ignoreCommons = false;
                     $len = count($stackTrace);
 
@@ -1694,6 +1717,8 @@
                         }
                     } else if ( get_class($arg) === 'Closure' ) {
                         return '<span class="syntax-variable">$Closure</span>()';
+                    } else if ( preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $arg) ) {
+                        return '<span class="syntax-literal">$' . get_class( $arg ) . '</span>';
                     } else {
                         return '<span class="syntax-variable">$' . get_class( $arg ) . '</span>';
                     }
@@ -1762,8 +1787,8 @@
                             $trace['html_file'] = "<span class='$klass'>$file</span>";
                             $trace['is_native'] = false;
                         } else {
-                            $file = '[internal function]';
-                            $trace['html_file'] = "<span class='file-internal'>$file</span>";
+                            $file = '[Internal PHP]';
+                            $trace['html_file'] = "<span class='file-internal-php'>$file</span>";
                             $trace['is_native'] = true;
                         }
 
@@ -1802,14 +1827,16 @@
                                 "$line    $file    $info" :
                                 "$line    $file" ;
 
-                        if ( $highlightI === $i ) {
-                            $cssClass = 'highlight';
-                        } else if ( $highlightI > $i ) {
-                            $cssClass = 'pre-highlight';
-                        } else if ( $trace['is_native'] ) {
-                            $cssClass = 'is-native';
+                        if ( $trace['is_native'] ) {
+                            $cssClass = 'is-native ';
                         } else {
                             $cssClass = '';
+                        }
+
+                        if ( $highlightI === $i ) {
+                            $cssClass .= 'highlight';
+                        } else if ( $highlightI > $i ) {
+                            $cssClass .= 'pre-highlight';
                         }
 
                         $data = '';
@@ -2089,7 +2116,7 @@
         }
 
         private function displayJSInjection() {
-            ?><script data-php_error="magic JS, just ignore!">
+            ?><script data-php_error="magic JS, just ignore this!">
                 "use strict";
 
                 (function( window ) {
@@ -2152,7 +2179,7 @@
                                 var state = inner.readyState;
 
                                 if (
-                                        (state === 3 || state === 4 ) &&
+                                        (state === 3 || state === 4) &&
                                         inner.responseText !== null &&
                                         inner.responseText.indexOf( '<?= BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER ?>' ) !== -1
                                 ) {
@@ -2687,21 +2714,33 @@
                 <?
                 /*
                  * Code and Stack highlighting colours
+                 * 
+                 * The way this works, is that syntax highlighting is turned off
+                 * for .pre-highlight. It then gets turns on for .pre-highlight,
+                 * if it matches certain criteria.
+                 * 
+                 * The emphasis is that pre-highlight is by default 'no highlight'.
                  */
                 ?>
                 .pre-highlight,
                 .highlight {
                     width: 100%;
-                    color: #eee;
                 }
+                .is-native,
                 .pre-highlight {
                     opacity: 0.3;
-                    color: #999 !important;
+                    color: #999;
                 }
-                    .pre-highlight span {
-                        color: #999 !important;
-                        border: none !important;
-                    }
+                .is-native {
+                    opacity: 0.3 !important;
+                }
+                .highlight,
+                .pre-highlight.highlight,
+                .highlight ~ .pre-highlight {
+                    color: #eee;
+                    opacity: 1;
+                }
+
                 .select-highlight {
                     background: #261313;
                 }
@@ -2715,36 +2754,69 @@
                     background: #451915;
                 }
 
+                .pre-highlight span,
+                .pre-highlight:not(.highlight):first-of-type span {
+                    color : #999;
+                    border: none !important;
+                }
+
                 <?
                 /*
                  * Syntax Highlighting
                  */
                 ?>
-                .syntax-class {
+                .pre-highlight:first-of-type .syntax-class,
+                .highlight ~ .pre-highlight  .syntax-class,
+                .pre-highlight.highlight     .syntax-class,
+                                             .syntax-class {
                     color: #C07041;
                 }
-                .syntax-string {
-                    color: #7C9D5D;
+                .pre-highlight:first-of-type .syntax-function,
+                .highlight ~ .pre-highlight  .syntax-function,
+                .pre-highlight.highlight     .syntax-function,
+                                             .syntax-function {
+                    color: #F9EE98;
                 }
-                .syntax-literal {
+                .pre-highlight:first-of-type .syntax-literal,
+                .highlight ~ .pre-highlight  .syntax-literal,
+                .pre-highlight.highlight     .syntax-literal,
+                                             .syntax-literal {
                     color: #cF5d33;
                 }
-                .syntax-variable-not-important {
+                .pre-highlight:first-of-type .syntax-string,
+                .highlight ~ .pre-highlight  .syntax-string,
+                .pre-highlight.highlight     .syntax-string,
+                                             .syntax-string {
+                    color: #7C9D5D;
+                }
+                .pre-highlight:first-of-type .syntax-variable-not-important,
+                .highlight ~ .pre-highlight  .syntax-variable-not-important,
+                .pre-highlight.highlight     .syntax-variable-not-important,
+                                             .syntax-variable-not-important {
                     opacity: 0.5;
                 }
-                .syntax-higlight-variable {
+                .pre-highlight:first-of-type .syntax-higlight-variable,
+                .highlight ~ .pre-highlight  .syntax-higlight-variable,
+                .pre-highlight.highlight     .syntax-higlight-variable,
+                                             .syntax-higlight-variable {
                     color: #f00;
                     border-bottom: 3px dashed #c33;
                 }
+                .pre-highlight:first-of-type .syntax-variable,
+                .highlight ~ .pre-highlight  .syntax-variable,
+                .pre-highlight.highlight     .syntax-variable,
                 .syntax-variable {
                     color: #798aA0;
                 }
+                .pre-highlight:first-of-type .syntax-keyword,
+                .highlight ~ .pre-highlight  .syntax-keyword,
+                .pre-highlight.highlight     .syntax-keyword,
                 .syntax-keyword {
                     color: #C07041;
                 }
-                .syntax-function {
-                    color: #F9EE98;
-                }
+                .pre-highlight:first-of-type .syntax-comment,
+                .highlight ~ .pre-highlight  .syntax-comment,
+                .pre-highlight.highlight     .syntax-comment,
                 .syntax-comment {
                     color: #5a5a5a;
                 }
@@ -2754,19 +2826,31 @@
                  * File Highlighting
                  */
                 ?>
-                .file-internal {
-                    color: #555;
+                .file-internal-php {
+                    color: #555 !important;
                 }
-                .file-common {
+                .pre-highlight:first-of-type .file-common,
+                .highlight ~ .pre-highlight  .file-common,
+                .pre-highlight.highlight     .file-common,
+                                             .file-common {
                     color: #eb4;
                 }
-                .file-ignore {
+                .pre-highlight:first-of-type .file-ignore,
+                .highlight ~ .pre-highlight  .file-ignore,
+                .pre-highlight.highlight     .file-ignore,
+                                             .file-ignore {
                     color: #585;
                 }
-                .file-app {
+                .pre-highlight:first-of-type .file-app,
+                .highlight ~ .pre-highlight  .file-app,
+                .pre-highlight.highlight     .file-app,
+                                             .file-app {
                     color: #66c6d5;
                 }
-                .file-root {
+                .pre-highlight:first-of-type .file-root,
+                .highlight ~ .pre-highlight  .file-root,
+                .pre-highlight.highlight     .file-root,
+                                             .file-root {
                     color: #b69;
                 }
             </style><?
