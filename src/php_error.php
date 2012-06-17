@@ -94,7 +94,13 @@
         \ReflectionParameter;
 
     global $_php_error_global_handler;
-    $_php_error_global_handler = null;
+
+    /*
+     * Check if it's empty, in case this file is loaded multiple times.
+     */
+    if ( ! isset($_php_error_global_handler) ) {
+        $_php_error_global_handler = null;
+    }
 
     /**
      * This is shorthand for turning off error handling,
@@ -173,6 +179,7 @@
 
         const FILE_TYPE_APPLICATION = 1;
         const FILE_TYPE_IGNORE      = 2;
+        const FILE_TYPE_ROOT        = 3;
 
         const MAGIC_IS_PRETTY_ERRORS_MARKER = '<!-- __magic_php_error_is_a_stack_trace_constant__ -->';
 
@@ -318,6 +325,7 @@
 
         private static $syntaxMap = array(
                 T_COMMENT                     => 'syntax-comment',
+                T_DOC_COMMENT                 => 'syntax-comment',
 
                 'reference_ampersand'         => 'syntax-function',
 
@@ -848,16 +856,16 @@
          * You don't have to supply any, it's up to you.
          * 
          * Includes:
-         *  = Types of errors this will / won't catch =
-         *  - catch_class_not_found     When true, calling the class autoloader in PHP will throw an error. This defaults to true.
-         *  - catch_supressed_errors    The @ supresses errors. However if this is set to true, then they are still reported. Defaults to false.
+         *  = Types of errors this will catch =
          *  - catch_ajax_errors         When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors. Defaults to true.
+         *  - catch_supressed_errors    The @ supresses errors. If set to true, then they are still reported anyway, but respected when false. Defaults to false.
+         *  - catch_class_not_found     When true, loading a class that does not exist will be caught. This defaults to true.
          * 
          *  = Error reporting level =
          *  - error_reporting_on        value for when errors are on, defaults to all errors
          *  - error_reporting_off       value for when errors are off, defaults to php.ini's error_reporting.
          * 
-         *  = Setup details =
+         *  = Setup Details =
          *  - application_root          When it's working out hte stack trace, this is the root folder of the application, to use as it's base.
          *                              Defaults to the servers root directory.
          * 
@@ -940,7 +948,7 @@
             $this->catchSurpressedErrors    = BetterErrorsReporter::optionsPop( $options, 'catch_supressed_errors', false );
             $this->catchAjaxErrors          = BetterErrorsReporter::optionsPop( $options, 'catch_ajax_errors'     , true  );
 
-            $this->backgroundText           = BetterErrorsReporter::optionsPop( $options, 'background_text', '' );
+            $this->backgroundText           = BetterErrorsReporter::optionsPop( $options, 'background_text'       , ''    );
             $this->numLines                 = BetterErrorsReporter::optionsPop( $options, 'snippet_num_lines'     , BetterErrorsReporter::NUM_FILE_LINES        );
             $this->ajaxGetName              = BetterErrorsReporter::optionsPop( $options, 'ajax_get_name'         , BetterErrorsReporter::JS_COMMUNICATION_NAME );
             if ( ! $this->ajaxGetName || ! is_string($this->ajaxGetName) ) {
@@ -989,10 +997,11 @@
          * This will use the strictest error reporting available, or the
          * level you pass in when creating this using the 'error_reporting_on'
          * option.
+         * 
+         * @return This error reporting handler, for method chaining.
          */
         public function turnOn() {
-            $this->isOn = true;
-            $this->attachErrorHandles();
+            $this->setEnabled( true );
 
             return $this;
         }
@@ -1003,9 +1012,11 @@
          * This will use the 'php.ini' setting for the error_reporting level,
          * or one you have passed in if you used the 'error_reporting_off'
          * option when creating this.
+         * 
+         * @return This error reporting handler, for method chaining.
          */
         public function turnOff() {
-            $this->isOn = false;
+            $this->setEnabled( false );
 
             return $this;
         }
@@ -1088,7 +1099,7 @@
                 ini_set( 'implicit_flush', false );
                 ob_implicit_flush( false );
 
-                if ( ! ini_get('output_buffering') ) {
+                if ( ! @ini_get('output_buffering') ) {
                     ini_set('output_buffering', 1);
                 }
 
@@ -1138,7 +1149,7 @@
                     $content = $this->bufferOutput;
                 }
 
-                if ( ini_get('zlib.output_compression') ) {
+                if ( @ini_get('zlib.output_compression') ) {
                     ob_start();
                 } else {
                     ob_start('ob_gzhandler');
@@ -1194,20 +1205,23 @@
             );
         }
 
-        private function getFolderType( $root, $file=null ) {
-            if ( func_num_args() === 1 ) {
-                $file = $root;
+        private function getFolderType( $root, $file ) {
+            $testFile = $this->removeRootPath( $root, $file );
+
+            // it's this file : (
+            if ( $file === __FILE__ ) {
+                $type = BetterErrorsReporter::FILE_TYPE_IGNORE;
+            } else if ( strpos('/', $testFile) === false ) {
+                $type = BetterErrorsReporter::FILE_TYPE_ROOT;
+            } else if ( $this->isApplicationFolder($testFile) ) {
+                $type = BetterErrorsReporter::FILE_TYPE_APPLICATION;
+            } else if ( $this->isIgnoreFolder($testFile) ) {
+                $type = BetterErrorsReporter::FILE_TYPE_IGNORE;
             } else {
-                $file = $this->removeRootPath( $root, $file );
+                $type = false;
             }
 
-            if ( $this->isApplicationFolder($file) ) {
-                return BetterErrorsReporter::FILE_TYPE_APPLICATION;
-            } else if ( $this->isIgnoreFolder($file) ) {
-                return BetterErrorsReporter::FILE_TYPE_IGNORE;
-            } else {
-                return false;
-            }
+            return array( $type, $testFile );
         }
 
         /**
@@ -1616,7 +1630,7 @@
                         $trace = &$stackTrace[ $i % $len ];
 
                         if ( isset($trace['file']) && isset($trace['line']) ) {
-                            $type = $this->getFolderType( $root, $trace['file'] );
+                            list( $type, $_ ) = $this->getFolderType( $root, $trace['file'] );
 
                             if ( $type !== BetterErrorsReporter::FILE_TYPE_IGNORE ) {
                                 if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
@@ -1731,21 +1745,18 @@
                         $trace['info'] = $info;
 
                         if ( isset($trace['file']) ) {
-                            $file = $this->removeRootPath( $root, $trace['file'] );
                             $klass = '';
 
-                            if ( strpos($file, '/') === false ) {
-                                $klass = 'file-root';
-                            } else {
-                                $type = $this->getFolderType( $file );
+                            list( $type, $file ) = $this->getFolderType( $root, $trace['file'] );
 
-                                if ( $type === BetterErrorsReporter::FILE_TYPE_IGNORE ) {
-                                    $klass = 'file-ignore';
-                                } else if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
-                                    $klass = 'file-app';
-                                } else {
-                                    $klass = 'file-common';
-                                }
+                            if ( $type === BetterErrorsReporter::FILE_TYPE_ROOT ) {
+                                $klass = 'file-root';
+                            } else if ( $type === BetterErrorsReporter::FILE_TYPE_IGNORE ) {
+                                $klass = 'file-ignore';
+                            } else if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
+                                $klass = 'file-app';
+                            } else {
+                                $klass = 'file-common';
                             }
 
                             $trace['html_file'] = "<span class='$klass'>$file</span>";
@@ -1791,12 +1802,12 @@
                                 "$line    $file    $info" :
                                 "$line    $file" ;
 
-                        if ( $trace['is_native'] ) {
-                            $cssClass = 'is-native';
-                        } else if ( $highlightI === $i ) {
+                        if ( $highlightI === $i ) {
                             $cssClass = 'highlight';
                         } else if ( $highlightI > $i ) {
                             $cssClass = 'pre-highlight';
+                        } else if ( $trace['is_native'] ) {
+                            $cssClass = 'is-native';
                         } else {
                             $cssClass = '';
                         }
@@ -1816,24 +1827,53 @@
             }
         }
 
+        private function logError( $message, $file, $line, $ex=null, $stack=null ) {
+            if ( $ex ) {
+                $trace = $ex->getTraceAsString();
+                $parts = explode( "\n", $trace );
+                $trace = "        " . join( "\n        ", $parts );
+
+                error_log( "$message \n           $file, $line \n$trace" );
+            } else {
+                error_log( "$message \n           $file, $line" );
+            }
+        }
+
+        /**
+         * Given a class name, which can include a namespace,
+         * this will report that it is not found.
+         * 
+         * This will also report it as an exception,
+         * so you will get a full stack trace.
+         */
+        public function reportClassNotFound( $className ) {
+            throw new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
+        }
+
+        /**
+         * Given an exception, this will report it.
+         */
         public function reportException( $ex ) {
-            $file = $ex->getFile();
-            $line = $ex->getLine();
-            $message = $ex->getMessage();
-
-            $trace = $ex->getTraceAsString();
-            $parts = explode( "\n", $trace );
-            $trace = "        " . join( "\n        ", $parts );
-
-            error_log( "$message \n           $file, $line \n$trace" );
-
-            $this->reportError( $ex->getCode(), $message, $line, $file, $ex->getTrace(), $ex );
+            $this->reportError(
+                    $ex->getCode(),
+                    $ex->getMessage(),
+                    $ex->getLine(),
+                    $ex->getFile(),
+                    $ex->getTrace(),
+                    $ex
+            );
         }
 
         /**
          * The entry point for handling an error.
+         * 
+         * This is the lowest entry point for error reporting,
+         * and for that reason it can either take just error info,
+         * or a combination of error and exception information.
          */
         public function reportError( $code, $message, $errLine, $errFile, $stackTrace=null, $ex=null ) {
+            $this->logError( $message, $errFile, $errLine, $ex, $stackTrace );
+
             $root = $this->applicationRoot;
 
             list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
@@ -1889,6 +1929,36 @@
             return array( $fileLinesSets, $minSize );
         }
 
+        private function setEnabled( $isOn ) {
+            $wasOn = $this->isOn;
+            $this->isOn = $isOn;
+
+            /*
+             * Only turn off, if we're moving from on to off.
+             * 
+             * This is so if it's turned off without turning on,
+             * we don't change anything.
+             */
+            if ( !$isOn ) {
+                if ( $wasOn ) {
+                    $this->runDisableErrors();
+                }
+            /*
+             * Always turn it on, even if already on.
+             * 
+             * This is incase it was messed up in some way
+             * by the user.
+             */
+            } else if ( $isOn ) {
+                $this->runEnableErrors();
+            }
+        }
+
+        private function runDisableErrors() {
+            error_reporting( $this->defaultErrorReportingOff );
+            @ini_restore( 'html_errors', $this->iniHtmlErrors );
+        }
+
         /*
          * Now the actual hooking into PHP's error reporting.
          * 
@@ -1896,69 +1966,125 @@
          * We also need to hook into the shutdown function so
          * we can catch fatal and compile time errors.
          */
-        private function attachErrorHandles() {
-            if ( $this->isOff() ) {
-                error_reporting( $this->defaultErrorReportingOff );
-            } else {
-                $catchSurpressedErrors = &$this->catchSurpressedErrors;
-                $self = $this;
+        private function runEnableErrors() {
+            $catchSurpressedErrors = &$this->catchSurpressedErrors;
+            $self = $this;
 
-                // all errors \o/ !
-                error_reporting( $this->defaultErrorReportingOn );
-                ini_set( 'html_errors', false );
+            // all errors \o/ !
+            error_reporting( $this->defaultErrorReportingOn );
+            ini_set( 'html_errors', false );
 
-                set_error_handler(
-                        function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
+            set_error_handler(
+                    function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
+                        /*
+                         * DO NOT! log the error.
+                         * 
+                         * Either it's thrown as an exception, and so logged by the exception handler,
+                         * or we return false, and it's logged by PHP.
+                         * 
+                         * Also DO NOT! throw an exception, instead report it.
+                         * This is because if an operation raises both a user AND
+                         * fatal error (such as require), then the exception is
+                         * silently ignored.
+                         */
+                        if ( $self->isOn() ) {
                             /*
-                             * DO NOT! log the error.
-                             * 
-                             * Either it's thrown as an exception, and so logged by the exception handler,
-                             * or we return false, and it's logged by PHP.
-                             * 
-                             * Also DO NOT! throw an exception, instead report it.
-                             * This is because if an operation raises both a user AND
-                             * fatal error (such as require), then the exception is
-                             * silently ignored.
+                             * When using an @, the error reporting drops to 0.
                              */
-                            if ( $self->isOn() ) {
-                                /*
-                                 * When using an @, the error reporting drops to 0.
-                                 */
-                                if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
-                                    $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
+                            if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
+                                $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
 
-                                    $self->reportException( $ex );
-                                }
-                            } else {
-                                return false;
+                                $self->reportException( $ex );
                             }
-                        },
-                        $this->defaultErrorReportingOn 
-                );
+                        } else {
+                            return false;
+                        }
+                    },
+                    $this->defaultErrorReportingOn 
+            );
 
-                set_exception_handler( function($ex) use ( $self ) {
-                    if ( $self->isOn() ) {
-                        $self->reportException( $ex );
-                    } else {
-                        return false;
-                    }
+            set_exception_handler( function($ex) use ( $self ) {
+                if ( $self->isOn() ) {
+                    $self->reportException( $ex );
+                } else {
+                    return false;
+                }
+            });
+
+            if ( ! $self->isShutdownRegistered ) {
+                if ( $self->catchClassNotFound ) {
+                    /*
+                     * When called, the callback will move it's self to the back of the list,
+                     * if it's not there already.
+                     * 
+                     * This is to avoid conflicting with other class loaders.
+                     */
+                    $classNotFoundFun = null;
+                    $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun ) {
+                        if ( $self->isOn() ) {
+                            $funs = spl_autoload_functions();
+
+                            if ( $funs[count($funs)-1] !== $classNotFoundFun ) {
+                                /*
+                                 * You cannot change the registered functions when your
+                                 * in the middle.
+                                 * 
+                                 * So we re-arrange them dynamically.
+                                 */
+
+                                /*
+                                 * Remove everything before us.
+                                 */
+
+                                $ourIndex = 0;
+                                foreach ( $funs as $i => $fun ) {
+                                    spl_autoload_unregister( $fun );
+
+                                    if ( $fun === $classNotFoundFun ) {
+                                        $ourIndex = $i;
+                                        break;
+                                    }
+                                }
+
+                                /*
+                                 * Put us to the end, and re-call.
+                                 */
+
+                                spl_autoload_register( $classNotFoundFun );
+
+                                spl_autoload_call( $className );
+
+                                /*
+                                 * Then remove all class loaders,
+                                 * and re-set them up to be how they were,
+                                 * but with us moved to the end.
+                                 */
+                                spl_autoload_unregister( $classNotFoundFun );
+
+                                for ( $i = $ourIndex+1; $i < count($funs); $i++ ) {
+                                    spl_autoload_unregister( $funs[$i] );
+                                }
+
+                                foreach ( $funs as $fun ) {
+                                    if ( $fun !== $classNotFoundFun ) {
+                                        spl_autoload_register( $fun );
+                                    }
+                                }
+                                spl_autoload_register( $classNotFoundFun );
+                            } else {
+                                $self->reportClassNotFound( $className );
+                            }
+                        }
+                    };
+
+                    spl_autoload_register( $classNotFoundFun );
+                }
+
+                register_shutdown_function( function() use ( $self ) {
+                    $self->__onShutdown();
                 });
 
-                if ( ! $self->isShutdownRegistered ) {
-                    if ( $self->catchClassNotFound ) {
-                        spl_autoload_register( function($className) use ( $self ) {
-                            if ( $self->isOn() ) {
-                                throw new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
-                            }
-                        } );
-                    }
-
-                    register_shutdown_function( function() use ( $self ) {
-                        $self->__onShutdown();
-                    });
-
-                    $self->isShutdownRegistered = true;
-                }
+                $self->isShutdownRegistered = true;
             }
         }
 
@@ -2382,13 +2508,14 @@
                         .background {
                             background: #111;
                             width: 100%;
-                            min-height: 100%;
 
                             padding: 16px 32px;
                             -moz-box-sizing: border-box;
                             box-sizing: border-box;
 
                             position: relative;
+
+                            height: 100%;
                         }
                 html.ajax {
                     background: transparent;
@@ -2404,7 +2531,7 @@
                             border-radius: 4px;
                             box-shadow: 5px 8px 18px rgba( 0, 0, 0, 0.4 );
 
-                            min-height: 0;
+                            height: auto;
                         }
 
                 #ajax-close,
@@ -2525,6 +2652,7 @@
                     }
                     .error-file-lines.show {
                         opacity: 1;
+                        z-index: 1;
                     }
                         .error-file-line {
                             font: 16px consolas;
