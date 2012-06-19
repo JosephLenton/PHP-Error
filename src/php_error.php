@@ -154,8 +154,6 @@
      */
     class BetterErrorsReporter
     {
-        const JS_COMMUNICATION_NAME = '_php_error_js_internal_communication_name_';
-
         const REGEX_DOCTYPE = '/<( )*!( *)DOCTYPE([^>]+)>/';
 
         const REGEX_PHP_IDENTIFIER = '\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*';
@@ -857,10 +855,10 @@
         private $backgroundText;
         private $numLines;
 
-        private $ajaxGetName;
-
         private $bufferOutput;
         private $isInEndBuffer;
+
+        private $isAjax;
 
         /**
          * = Options =
@@ -901,10 +899,6 @@
          * 
          *  - background_text           The text that appeares in the background. By default this is blank.
          *                              Why? You can replace this with the name of your framework, for extra customization spice.
-         * 
-         *  - ajax_get_name             When the runtime talks to this script, it will use this to say it's talking.
-         *                              By default this is the GET parameter '_php_error_js_internal_communication_name_'.
-         *                              If that happens to clash (how???), then you can redefine it with this option.
          * 
          * @param options Optional, an array of values to customize this handler.
          * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
@@ -963,21 +957,16 @@
 
             $this->backgroundText           = BetterErrorsReporter::optionsPop( $options, 'background_text'       , ''    );
             $this->numLines                 = BetterErrorsReporter::optionsPop( $options, 'snippet_num_lines'     , BetterErrorsReporter::NUM_FILE_LINES        );
-            $this->ajaxGetName              = BetterErrorsReporter::optionsPop( $options, 'ajax_get_name'         , BetterErrorsReporter::JS_COMMUNICATION_NAME );
-            if ( ! $this->ajaxGetName || ! is_string($this->ajaxGetName) ) {
-                throw new InvalidArgumentException( "Null or non-string ajax_get_name provided" );
-            }
-
-            $this->isAjax = isset($_GET) && isset($_GET[$this->ajaxGetName]);
-            if ( $this->isAjax ) {
-                unset( $_GET[$this->ajaxGetName] );
-            }
 
             if ( $options ) {
                 foreach ( $options as $key => $val ) {
                     throw new InvalidArgumentException( "Unknown option given $key" );
                 }
             }
+
+            $this->isAjax =
+                    isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) &&
+                    ( $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest' );
 
             $this->bufferOutput  = '';
             $this->isInEndBuffer = false;
@@ -2121,18 +2110,17 @@
 
                 (function( window ) {
                     if ( window.XMLHttpRequest ) {
-                        var AJAX_COMMUNICATION_NAME = '<?= $this->ajaxGetName ?>';
                         var old = window.XMLHttpRequest;
  
                         /*
                          * Certain properties will error when read,
                          * and which ones do vary from browser to browser.
                          * 
-                         * I've found these in both Chrome and Firefox,
-                         * and where it differs.
+                         * I've found both Chrome and Firefox will error
+                         * on _different_ properties.
                          * 
-                         * So I just wrap in a try/catch, and hope it
-                         * doesn't error.
+                         * So every read needs to be wrapped in a try/catch,
+                         * and just hope it doesn't error.
                          */
                         var copyProperties = function( src, dest, props ) {
                             for ( var i = 0; i < props.length; i++ ) {
@@ -2178,10 +2166,18 @@
                                 copyRequestProperties( inner, self, true );
                                 var state = inner.readyState;
 
+                                /*
+                                 * This needs to be html-entitied and then decoded,
+                                 * so the JS cannot match this very line of code.
+                                 */
+                                var marker = '<?= htmlentities( BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER ) ?>'.
+                                        replace( '&gt;', '>' ).
+                                        replace( '&lt;', '<' );
+
                                 if (
                                         (state === 3 || state === 4) &&
                                         inner.responseText !== null &&
-                                        inner.responseText.indexOf( '<?= BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER ?>' ) !== -1
+                                        inner.responseText.indexOf( marker ) !== -1
                                 ) {
                                     isProcessing = false;
 
@@ -2218,6 +2214,8 @@
                                         var body = document.getElementsByTagName('body')[0];
                                         body.appendChild( iframe );
 
+                                        var response = inner.responseText;
+
                                         setTimeout( function() {
                                             var iDoc = iframe.contentWindow || iframe.contentDocument;
                                             if ( iDoc.document) {
@@ -2225,7 +2223,7 @@
                                             }
 
                                             var iBody = iDoc.getElementsByTagName("body")[0];
-                                            iBody.innerHTML = inner.responseText;
+                                            iBody.innerHTML = inner;
 
                                             var iHead = iDoc.getElementsByTagName("head")[0];
 
@@ -2290,6 +2288,13 @@
                             },
                             send: function() {
                                 copyRequestProperties( this, this.__innerXMLHttpRequest );
+
+                                /*
+                                 * Ensure this header was set,
+                                 * just incase it was not.
+                                 */
+                                this.__innerXMLHttpRequest.setRequestHeader( 'HTTP_X_REQUESTED_WITH', 'XMLHttpRequest' );
+
                                 return old.prototype.send.apply( this.__innerXMLHttpRequest, arguments );
                             }
                         };
