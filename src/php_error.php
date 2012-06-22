@@ -184,6 +184,8 @@
         const FILE_TYPE_IGNORE      = 2;
         const FILE_TYPE_ROOT        = 3;
 
+        const PHP_ERROR_MAGIC_HEADER_KEY = 'PHP_ERROR_MAGIC_HEADER';
+        const PHP_ERROR_MAGIC_HEADER_VALUE = 'php_stack_error';
         const MAGIC_IS_PRETTY_ERRORS_MARKER = '<!-- __magic_php_error_is_a_stack_trace_constant__ -->';
 
         /**
@@ -1097,7 +1099,7 @@
              * 
              * We also pass on any existing content, so it doesn't get lost.
              */
-            if ( $this->catchAjaxErrors ) {
+            if ( !$this->isAjax && $this->catchAjaxErrors ) {
                 ini_set( 'implicit_flush', false );
                 ob_implicit_flush( false );
 
@@ -1128,7 +1130,7 @@
          * This will inject JS into the output, before it is done.
          */
         private function endBuffer() {
-            if ( $this->catchAjaxErrors ) {
+            if ( !$this->isAjax && $this->catchAjaxErrors ) {
                 $content  = ob_get_contents();
                 $handlers = ob_list_handlers();
 
@@ -2160,117 +2162,131 @@
                             var self = this,
                                 inner = new old();
 
-                            var isProcessing = true;
+                            /**
+                             * With a buggy XMLHttpRequest, it's possible to accidentally run the error handler
+                             * multiple times.
+                             * 
+                             * This is a flag to only do it once, to keep the code more defensive.
+                             */
+                            var errorOnce   = true,
+                                isAjaxError = false;
 
                             inner.onreadystatechange = function() {
                                 copyRequestProperties( inner, self, true );
                                 var state = inner.readyState;
 
                                 /*
-                                 * This needs to be html-entitied and then decoded,
-                                 * so the JS cannot match this very line of code.
+                                 * Received headers.
                                  */
-                                var marker = '<?= htmlentities( BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER ) ?>'.
-                                        replace( '&gt;', '>' ).
-                                        replace( '&lt;', '<' );
+                                if ( state === 2 ) {
+                                    var header = inner.getResponseHeader('<?= BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_KEY ?>');
 
-                                if (
-                                        (state === 3 || state === 4) &&
-                                        inner.responseText !== null &&
-                                        inner.responseText.indexOf( marker ) !== -1
-                                ) {
-                                    isProcessing = false;
-
-                                    if ( state === 4 ) {
-                                        var body = document.body;
-                                        var iframe = [
-                                                "<iframe ",
-                                                " width='100%'",
-                                                " height='100%'",
-                                                " style='",
-                                                        '-webkit-transition: opacity 200ms linear;',
-                                                        '-moz-transition: opacity 200ms linear;',
-                                                        '-ms-transition: opacity 200ms linear;',
-                                                        '-o-transition: opacity 200ms linear;',
-                                                        'transition: opacity 200ms linear;',
-                                                        'opacity: 0;',
-
-                                                        'background:transparent;',
-                                                        'position:fixed;',
-                                                        'top:0;',
-                                                        'left:0;',
-                                                        'right:0;',
-                                                        'bottom:0;',
-                                                "'",
-                                                ">",
-                                                '</iframe>'
-                                        ].join('');
-
-                                        var div = document.createElement('div');
-                                        div.innerHTML = iframe;
-                                        iframe = div.firstChild;
-                                        div.removeChild( iframe );
-
-                                        var body = document.getElementsByTagName('body')[0];
-                                        body.appendChild( iframe );
-
-                                        var response = inner.responseText;
-
-                                        setTimeout( function() {
-                                            var iDoc = iframe.contentWindow || iframe.contentDocument;
-                                            if ( iDoc.document) {
-                                                iDoc = iDoc.document;
-                                            }
-
-                                            var iBody = iDoc.getElementsByTagName("body")[0];
-                                            iBody.innerHTML = inner;
-
-                                            var iHead = iDoc.getElementsByTagName("head")[0];
-
-                                            // re-run the script tags
-                                            var scripts = iDoc.getElementsByTagName('script');
-                                            for ( var i = 0; i < scripts.length; i++ ) {
-                                                var script = scripts[i];
-                                                var parent = script.parentNode;
-
-                                                if ( parent ) {
-                                                    parent.removeChild( script );
-
-                                                    var newScript = iDoc.createElement('script');
-                                                    newScript.innerHTML = script.innerHTML;
-
-                                                    iHead.appendChild( newScript );
-                                                }
-                                            }
-
-                                            var closed = false;
-
-                                            // setup the close handler
-                                            iDoc.getElementById('ajax-close').onclick = function() {
-                                                if ( ! closed ) {
-                                                    closed = true;
-
-                                                    iframe.style.opacity = 0;
-
-                                                    setTimeout( function() {
-                                                        iframe.parentNode.removeChild( iframe );
-                                                    }, 220 );
-                                                }
-                                                return false;
-                                            };
-
-                                            var html = iDoc.getElementsByTagName('html')[0];
-                                            html.setAttribute( 'class', 'ajax' );
-
-                                            setTimeout( function() {
-                                                iframe.style.opacity = 1;
-                                            }, 1 );
-                                        }, 1 );
+                                    if ( header !== null ) {
+                                        isAjaxError = true;
                                     }
                                 }
-                                
-                                if ( self.onreadystatechange && isProcessing ) {
-                                    self.onreadystatechange.apply( this, arguments );
+
+                                /*
+                                 * Success ! \o/
+                                 * 
+                                 * Pass any state change on to the parent caller,
+                                 * unless we hit an ajaxy error.
+                                 */
+                                if ( ! isAjaxError ) {
+                                    if ( self.onreadystatechange ) {
+                                        self.onreadystatechange.apply( self, arguments );
+                                    }
+
+                                /*
+                                 * Fail : (
+                                 */
+                                } else if ( state === 4 && errorOnce ) {
+                                    errorOnce = false;
+
+                                    var body = document.body;
+                                    var iframe = [
+                                            "<iframe ",
+                                            " width='100%'",
+                                            " height='100%'",
+                                            " style='",
+                                                    '-webkit-transition: opacity 200ms linear;',
+                                                    '-moz-transition: opacity 200ms linear;',
+                                                    '-ms-transition: opacity 200ms linear;',
+                                                    '-o-transition: opacity 200ms linear;',
+                                                    'transition: opacity 200ms linear;',
+                                                    'opacity: 0;',
+
+                                                    'background:transparent;',
+                                                    'position:fixed;',
+                                                    'top:0;',
+                                                    'left:0;',
+                                                    'right:0;',
+                                                    'bottom:0;',
+                                            "'",
+                                            ">",
+                                            '</iframe>'
+                                    ].join('');
+
+                                    var div = document.createElement('div');
+                                    div.innerHTML = iframe;
+                                    iframe = div.firstChild;
+                                    div.removeChild( iframe );
+
+                                    var body = document.getElementsByTagName('body')[0];
+                                    body.appendChild( iframe );
+
+                                    var response = inner.responseText;
+
+                                    setTimeout( function() {
+                                        var iDoc = iframe.contentWindow || iframe.contentDocument;
+                                        if ( iDoc.document) {
+                                            iDoc = iDoc.document;
+                                        }
+
+                                        var iBody = iDoc.getElementsByTagName("body")[0];
+                                        iBody.innerHTML = response;
+
+                                        var iHead = iDoc.getElementsByTagName("head")[0];
+
+                                        // re-run the script tags
+                                        var scripts = iDoc.getElementsByTagName('script');
+                                        for ( var i = 0; i < scripts.length; i++ ) {
+                                            var script = scripts[i];
+                                            var parent = script.parentNode;
+
+                                            if ( parent ) {
+                                                parent.removeChild( script );
+
+                                                var newScript = iDoc.createElement('script');
+                                                newScript.innerHTML = script.innerHTML;
+
+                                                iHead.appendChild( newScript );
+                                            }
+                                        }
+
+                                        var closed = false;
+
+                                        // setup the close handler
+                                        iDoc.getElementById('ajax-close').onclick = function() {
+                                            if ( ! closed ) {
+                                                closed = true;
+
+                                                iframe.style.opacity = 0;
+
+                                                setTimeout( function() {
+                                                    iframe.parentNode.removeChild( iframe );
+                                                }, 220 );
+                                            }
+                                            return false;
+                                        };
+
+                                        var html = iDoc.getElementsByTagName('html')[0];
+                                        html.setAttribute( 'class', 'ajax' );
+
+                                        setTimeout( function() {
+                                            iframe.style.opacity = 1;
+                                        }, 1 );
+                                    }, 1 );
                                 }
                             };
 
@@ -2485,8 +2501,9 @@
                 ob_start("ob_gzhandler");
             } catch ( Exception $ex ) { /* do nothing */ }
 
+            header( BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_VALUE );
+
             echo '<!DOCTYPE html>';
-            echo BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER;
 
             if ( $head !== null ) {
                 $head();

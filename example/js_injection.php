@@ -9412,7 +9412,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 <script>
 	$(document).ready( function() {
-		$.get( '/example/class_not_found.php', function(str) {
+		$.get( '/example/unknown_variable.php', function(str) {
 			console.log('success!');
 		} );
 	});
