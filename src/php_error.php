@@ -75,6 +75,14 @@
      * limitation in PHP. It's because if an exception or error is raised,
      * then there is a single point of handling it.
      * 
+     * = INI Options
+     * 
+     * - php_error.force_disabled When set to a true value (such as on),
+     *                            this forces this to be off.
+     *                            This is so you can disable this script
+     *                            in your production servers ini file,
+     *                            incase you accidentally upload this there.
+     * 
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
      * 
      * @author Joseph Lenton | https://github.com/josephlenton
@@ -97,13 +105,15 @@
         \ReflectionFunction,
         \ReflectionParameter;
 
-    global $_php_error_global_handler;
+    global $_php_error_global_handler,
+           $_php_error_is_ini_enabled;
 
     /*
      * Check if it's empty, in case this file is loaded multiple times.
      */
     if ( ! isset($_php_error_global_handler) ) {
         $_php_error_global_handler = null;
+        $_php_error_is_ini_enabled = ! @ini_get( 'php_error.force_disabled' );
     }
 
     /**
@@ -117,6 +127,8 @@
      * @return The result of calling the callback.
      */
     function withoutErrors( $callback ) {
+        global $_php_error_global_handler;
+
         if ( $_php_error_global_handler !== null ) {
             return $_php_error_global_handler->withoutErrors( $callback );
         } else {
@@ -140,6 +152,7 @@
      */
     function reportErrors( $options=null ) {
         global $_php_error_global_handler;
+
         if ( $options === null && $_php_error_global_handler !== null ) {
             $handler = $_php_error_global_handler;
         } else {
@@ -868,6 +881,9 @@
          * All options are optional, and so is passing in an options item.
          * You don't have to supply any, it's up to you.
          * 
+         * Note that if 'php_error.force_disable' is true, then this object
+         * will try to look like it works, but won't actually do anything.
+         * 
          * Includes:
          *  = Types of errors this will catch =
          *  - catch_ajax_errors         When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors. Defaults to true.
@@ -1064,20 +1080,24 @@
          * It's exposed because it has to be exposed.
          */
         public function __onShutdown() {
-            if ( $this->isOn() ) {
-                $error = error_get_last();
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                if ( $this->isOn() ) {
+                    $error = error_get_last();
 
-                // fatal and syntax errors
-                if (
-                        $error && (
-                                $error['type'] ===  1 ||
-                                $error['type'] ===  4 ||
-                                $error['type'] === 64
-                        )
-                ) {
-                    $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
-                } else {
-                    $this->endBuffer();
+                    // fatal and syntax errors
+                    if (
+                            $error && (
+                                    $error['type'] ===  1 ||
+                                    $error['type'] ===  4 ||
+                                    $error['type'] === 64
+                            )
+                    ) {
+                        $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
+                    } else {
+                        $this->endBuffer();
+                    }
                 }
             }
         }
@@ -1094,32 +1114,36 @@
          * This ensures that output_buffering is turned on.
          */
         private function startBuffer() {
-            /*
-             * Ensure output bufferring is on, cos we will need it laterz.
-             * 
-             * We also pass on any existing content, so it doesn't get lost.
-             */
-            if ( !$this->isAjax && $this->catchAjaxErrors ) {
-                ini_set( 'implicit_flush', false );
-                ob_implicit_flush( false );
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                /*
+                 * Ensure output bufferring is on, cos we will need it laterz.
+                 * 
+                 * We also pass on any existing content, so it doesn't get lost.
+                 */
+                if ( !$this->isAjax && $this->catchAjaxErrors ) {
+                    ini_set( 'implicit_flush', false );
+                    ob_implicit_flush( false );
 
-                if ( ! @ini_get('output_buffering') ) {
-                    ini_set('output_buffering', 1);
-                }
-
-                $output = '';
-                $inEndBuffer = false;
-                $this->bufferOutput  = &$output;
-                $this->isInEndBuffer = &$inEndBuffer;
-
-                ob_start( function($string) use (&$output, &$inEndBuffer) {
-                    if ( $inEndBuffer ) {
-                        $output = $string;
-                        return '';
-                    } else {
-                        return $string;
+                    if ( ! @ini_get('output_buffering') ) {
+                        ini_set('output_buffering', 1);
                     }
-                });
+
+                    $output = '';
+                    $inEndBuffer = false;
+                    $this->bufferOutput  = &$output;
+                    $this->isInEndBuffer = &$inEndBuffer;
+
+                    ob_start( function($string) use (&$output, &$inEndBuffer) {
+                        if ( $inEndBuffer ) {
+                            $output = $string;
+                            return '';
+                        } else {
+                            return $string;
+                        }
+                    });
+                }
             }
         }
 
@@ -1130,50 +1154,54 @@
          * This will inject JS into the output, before it is done.
          */
         private function endBuffer() {
-            if ( !$this->isAjax && $this->catchAjaxErrors ) {
-                $content  = ob_get_contents();
-                $handlers = ob_list_handlers();
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                if ( !$this->isAjax && $this->catchAjaxErrors ) {
+                    $content  = ob_get_contents();
+                    $handlers = ob_list_handlers();
 
-                $this->isInEndBuffer = true;
-                for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
-                    $handler = $handlers[$i];
+                    $this->isInEndBuffer = true;
+                    for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
+                        $handler = $handlers[$i];
 
-                    if (
-                            $handler === 'ob_gzhandler' ||
-                            $handler === 'default output handler'
-                    ) {
-                        ob_end_clean();
-                    } else {
-                        ob_end_flush();
+                        if (
+                                $handler === 'ob_gzhandler' ||
+                                $handler === 'default output handler'
+                        ) {
+                            ob_end_clean();
+                        } else {
+                            ob_end_flush();
+                        }
                     }
+                    $this->isInEndBuffer = false;
+
+                    if ( $this->bufferOutput ) {
+                        $content = $this->bufferOutput;
+                    }
+
+                    if ( @ini_get('zlib.output_compression') ) {
+                        ob_start();
+                    } else {
+                        ob_start('ob_gzhandler');
+                    }
+                    
+                    $js = $this->getContent( 'displayJSInjection' );
+                    $js = JSMin::minify( $js );
+
+                    // attemp to inject the script into the HTML, after the doctype
+                    $matches = array();
+                    preg_match( BetterErrorsReporter::REGEX_DOCTYPE, $content, $matches );
+
+                    if ( $matches ) {
+                        $doctype = $matches[0];
+                        $content = preg_replace( BetterErrorsReporter::REGEX_DOCTYPE, "$doctype $js", $content );
+                    } else {
+                        echo $js;
+                    }
+
+                    echo $content;
                 }
-                $this->isInEndBuffer = false;
-
-                if ( $this->bufferOutput ) {
-                    $content = $this->bufferOutput;
-                }
-
-                if ( @ini_get('zlib.output_compression') ) {
-                    ob_start();
-                } else {
-                    ob_start('ob_gzhandler');
-                }
-                
-                $js = $this->getContent( 'displayJSInjection' );
-                $js = JSMin::minify( $js );
-
-                // attemp to inject the script into the HTML, after the doctype
-                $matches = array();
-                preg_match( BetterErrorsReporter::REGEX_DOCTYPE, $content, $matches );
-
-                if ( $matches ) {
-                    $doctype = $matches[0];
-                    $content = preg_replace( BetterErrorsReporter::REGEX_DOCTYPE, "$doctype $js", $content );
-                } else {
-                    echo $js;
-                }
-
-                echo $content;
             }
         }
 
@@ -1888,29 +1916,36 @@
          * This is the lowest entry point for error reporting,
          * and for that reason it can either take just error info,
          * or a combination of error and exception information.
+         * 
+         * Note that this will still log errors in the error log
+         * even when it's disabled with ini. It just does nothing
+         * more than that.
          */
         public function reportError( $code, $message, $errLine, $errFile, $stackTrace=null, $ex=null ) {
             $this->logError( $message, $errFile, $errLine, $ex, $stackTrace );
 
-            $root = $this->applicationRoot;
+            global $_php_error_is_ini_enabled;
+            if ( $_php_error_is_ini_enabled ) {
+                $root = $this->applicationRoot;
 
-            list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
-                    $this->improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, $stackTrace );
+                list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
+                        $this->improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, $stackTrace );
 
-            $errFile = $srcErrFile;
-            $errLine = $srcErrLine;
+                $errFile = $srcErrFile;
+                $errLine = $srcErrLine;
 
-            list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
+                list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
-            $errFile    = $this->removeRootPath( $root, $errFile );
-            $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
+                $errFile    = $this->removeRootPath( $root, $errFile );
+                $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
 
-            $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
+                $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
-            $this->displayError( $message, $srcErrLine, $errFile, $stackTrace, $fileLinesSets, $numFileLines );
+                $this->displayError( $message, $srcErrLine, $errFile, $stackTrace, $fileLinesSets, $numFileLines );
 
-            // exit in order to end processing
-            exit(0);
+                // exit in order to end processing
+                exit(0);
+            }
         }
 
         private function generateFileLineSets( $srcErrFile, $srcErrLine, &$stackTrace ) {
@@ -1948,33 +1983,41 @@
         }
 
         private function setEnabled( $isOn ) {
-            $wasOn = $this->isOn;
-            $this->isOn = $isOn;
+            global $_php_error_is_ini_enabled;
 
-            /*
-             * Only turn off, if we're moving from on to off.
-             * 
-             * This is so if it's turned off without turning on,
-             * we don't change anything.
-             */
-            if ( !$isOn ) {
-                if ( $wasOn ) {
-                    $this->runDisableErrors();
+            if ( $_php_error_is_ini_enabled ) {
+                $wasOn = $this->isOn;
+                $this->isOn = $isOn;
+
+                /*
+                 * Only turn off, if we're moving from on to off.
+                 * 
+                 * This is so if it's turned off without turning on,
+                 * we don't change anything.
+                 */
+                if ( !$isOn ) {
+                    if ( $wasOn ) {
+                        $this->runDisableErrors();
+                    }
+                /*
+                 * Always turn it on, even if already on.
+                 * 
+                 * This is incase it was messed up in some way
+                 * by the user.
+                 */
+                } else if ( $isOn ) {
+                    $this->runEnableErrors();
                 }
-            /*
-             * Always turn it on, even if already on.
-             * 
-             * This is incase it was messed up in some way
-             * by the user.
-             */
-            } else if ( $isOn ) {
-                $this->runEnableErrors();
             }
         }
 
         private function runDisableErrors() {
-            error_reporting( $this->defaultErrorReportingOff );
-            @ini_restore( 'html_errors', $this->iniHtmlErrors );
+            global $_php_error_is_ini_enabled;
+
+            if ( $_php_error_is_ini_enabled ) {
+                error_reporting( $this->defaultErrorReportingOff );
+                @ini_restore( 'html_errors', $this->iniHtmlErrors );
+            }
         }
 
         /*
@@ -1985,124 +2028,128 @@
          * we can catch fatal and compile time errors.
          */
         private function runEnableErrors() {
-            $catchSurpressedErrors = &$this->catchSurpressedErrors;
-            $self = $this;
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                $catchSurpressedErrors = &$this->catchSurpressedErrors;
+                $self = $this;
 
-            // all errors \o/ !
-            error_reporting( $this->defaultErrorReportingOn );
-            ini_set( 'html_errors', false );
+                // all errors \o/ !
+                error_reporting( $this->defaultErrorReportingOn );
+                ini_set( 'html_errors', false );
 
-            set_error_handler(
-                    function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
-                        /*
-                         * DO NOT! log the error.
-                         * 
-                         * Either it's thrown as an exception, and so logged by the exception handler,
-                         * or we return false, and it's logged by PHP.
-                         * 
-                         * Also DO NOT! throw an exception, instead report it.
-                         * This is because if an operation raises both a user AND
-                         * fatal error (such as require), then the exception is
-                         * silently ignored.
-                         */
-                        if ( $self->isOn() ) {
+                set_error_handler(
+                        function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
                             /*
-                             * When using an @, the error reporting drops to 0.
+                             * DO NOT! log the error.
+                             * 
+                             * Either it's thrown as an exception, and so logged by the exception handler,
+                             * or we return false, and it's logged by PHP.
+                             * 
+                             * Also DO NOT! throw an exception, instead report it.
+                             * This is because if an operation raises both a user AND
+                             * fatal error (such as require), then the exception is
+                             * silently ignored.
                              */
-                            if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
-                                $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
-
-                                $self->reportException( $ex );
-                            }
-                        } else {
-                            return false;
-                        }
-                    },
-                    $this->defaultErrorReportingOn 
-            );
-
-            set_exception_handler( function($ex) use ( $self ) {
-                if ( $self->isOn() ) {
-                    $self->reportException( $ex );
-                } else {
-                    return false;
-                }
-            });
-
-            if ( ! $self->isShutdownRegistered ) {
-                if ( $self->catchClassNotFound ) {
-                    /*
-                     * When called, the callback will move it's self to the back of the list,
-                     * if it's not there already.
-                     * 
-                     * This is to avoid conflicting with other class loaders.
-                     */
-                    $classNotFoundFun = null;
-                    $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun ) {
-                        if ( $self->isOn() ) {
-                            $funs = spl_autoload_functions();
-
-                            if ( $funs[count($funs)-1] !== $classNotFoundFun ) {
+                            if ( $self->isOn() ) {
                                 /*
-                                 * You cannot change the registered functions when your
-                                 * in the middle.
-                                 * 
-                                 * So we re-arrange them dynamically.
+                                 * When using an @, the error reporting drops to 0.
                                  */
+                                if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
+                                    $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
 
-                                /*
-                                 * Remove everything before us.
-                                 */
-
-                                $ourIndex = 0;
-                                foreach ( $funs as $i => $fun ) {
-                                    spl_autoload_unregister( $fun );
-
-                                    if ( $fun === $classNotFoundFun ) {
-                                        $ourIndex = $i;
-                                        break;
-                                    }
+                                    $self->reportException( $ex );
                                 }
-
-                                /*
-                                 * Put us to the end, and re-call.
-                                 */
-
-                                spl_autoload_register( $classNotFoundFun );
-
-                                spl_autoload_call( $className );
-
-                                /*
-                                 * Then remove all class loaders,
-                                 * and re-set them up to be how they were,
-                                 * but with us moved to the end.
-                                 */
-                                spl_autoload_unregister( $classNotFoundFun );
-
-                                for ( $i = $ourIndex+1; $i < count($funs); $i++ ) {
-                                    spl_autoload_unregister( $funs[$i] );
-                                }
-
-                                foreach ( $funs as $fun ) {
-                                    if ( $fun !== $classNotFoundFun ) {
-                                        spl_autoload_register( $fun );
-                                    }
-                                }
-                                spl_autoload_register( $classNotFoundFun );
                             } else {
-                                $self->reportClassNotFound( $className );
+                                return false;
                             }
-                        }
-                    };
+                        },
+                        $this->defaultErrorReportingOn 
+                );
 
-                    spl_autoload_register( $classNotFoundFun );
-                }
-
-                register_shutdown_function( function() use ( $self ) {
-                    $self->__onShutdown();
+                set_exception_handler( function($ex) use ( $self ) {
+                    if ( $self->isOn() ) {
+                        $self->reportException( $ex );
+                    } else {
+                        return false;
+                    }
                 });
 
-                $self->isShutdownRegistered = true;
+                if ( ! $self->isShutdownRegistered ) {
+                    if ( $self->catchClassNotFound ) {
+                        /*
+                         * When called, the callback will move it's self to the back of the list,
+                         * if it's not there already.
+                         * 
+                         * This is to avoid conflicting with other class loaders.
+                         */
+                        $classNotFoundFun = null;
+                        $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun ) {
+                            if ( $self->isOn() ) {
+                                $funs = spl_autoload_functions();
+
+                                if ( $funs[count($funs)-1] !== $classNotFoundFun ) {
+                                    /*
+                                     * You cannot change the registered functions when your
+                                     * in the middle.
+                                     * 
+                                     * So we re-arrange them dynamically.
+                                     */
+
+                                    /*
+                                     * Remove everything before us.
+                                     */
+
+                                    $ourIndex = 0;
+                                    foreach ( $funs as $i => $fun ) {
+                                        spl_autoload_unregister( $fun );
+
+                                        if ( $fun === $classNotFoundFun ) {
+                                            $ourIndex = $i;
+                                            break;
+                                        }
+                                    }
+
+                                    /*
+                                     * Put us to the end, and re-call.
+                                     */
+
+                                    spl_autoload_register( $classNotFoundFun );
+
+                                    spl_autoload_call( $className );
+
+                                    /*
+                                     * Then remove all class loaders,
+                                     * and re-set them up to be how they were,
+                                     * but with us moved to the end.
+                                     */
+                                    spl_autoload_unregister( $classNotFoundFun );
+
+                                    for ( $i = $ourIndex+1; $i < count($funs); $i++ ) {
+                                        spl_autoload_unregister( $funs[$i] );
+                                    }
+
+                                    foreach ( $funs as $fun ) {
+                                        if ( $fun !== $classNotFoundFun ) {
+                                            spl_autoload_register( $fun );
+                                        }
+                                    }
+                                    spl_autoload_register( $classNotFoundFun );
+                                } else {
+                                    $self->reportClassNotFound( $className );
+                                }
+                            }
+                        };
+
+                        spl_autoload_register( $classNotFoundFun );
+                    }
+
+                    register_shutdown_function( function() use ( $self ) {
+                        $self->__onShutdown();
+                    });
+
+                    $self->isShutdownRegistered = true;
+                }
             }
         }
 
@@ -2607,21 +2654,24 @@
                 }
                 #ajax-close {
                     position: absolute;
-                    right: -18px;
+                    right: -17px;
                     top  : -18px;
                     background: #622;
 
                     color: #ccc;
 
-                    font: 21px arial;
-                    font-weight: 900;
-                    line-height: 38px;
+                    font: 22px arial;
+                    font-weight: 400;
+                    padding-top: 1px;
+                    line-height: 37px;
                     min-width  : 38px;
                     text-align : center;
 
-                    border-radius: 300px;
+                    border-radius: 28px;
                     box-shadow: 3px 3px 11px rgba(0,0,0,0.25);
 
+                    border-top-right-radius: 32px 18px;
+                    border-bottom-right-radius: 30px 32px;
                 }
                     #ajax-close:hover {
                         background: #944;
