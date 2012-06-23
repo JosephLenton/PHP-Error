@@ -75,6 +75,14 @@
      * limitation in PHP. It's because if an exception or error is raised,
      * then there is a single point of handling it.
      * 
+     * = INI Options
+     * 
+     * - php_error.force_disabled When set to a true value (such as on),
+     *                            this forces this to be off.
+     *                            This is so you can disable this script
+     *                            in your production servers ini file,
+     *                            incase you accidentally upload this there.
+     * 
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
      * 
      * @author Joseph Lenton | https://github.com/josephlenton
@@ -97,13 +105,15 @@
         \ReflectionFunction,
         \ReflectionParameter;
 
-    global $_php_error_global_handler;
+    global $_php_error_global_handler,
+           $_php_error_is_ini_enabled;
 
     /*
      * Check if it's empty, in case this file is loaded multiple times.
      */
     if ( ! isset($_php_error_global_handler) ) {
         $_php_error_global_handler = null;
+        $_php_error_is_ini_enabled = ! @ini_get( 'php_error.force_disabled' );
     }
 
     /**
@@ -117,6 +127,8 @@
      * @return The result of calling the callback.
      */
     function withoutErrors( $callback ) {
+        global $_php_error_global_handler;
+
         if ( $_php_error_global_handler !== null ) {
             return $_php_error_global_handler->withoutErrors( $callback );
         } else {
@@ -140,13 +152,14 @@
      */
     function reportErrors( $options=null ) {
         global $_php_error_global_handler;
+
         if ( $options === null && $_php_error_global_handler !== null ) {
             $handler = $_php_error_global_handler;
         } else {
             $handler = new BetterErrorsReporter( $options );
         }
         
-        return $handler->turnOn();
+        $handler->turnOn();
     }
 
     /**
@@ -184,6 +197,8 @@
         const FILE_TYPE_IGNORE      = 2;
         const FILE_TYPE_ROOT        = 3;
 
+        const PHP_ERROR_MAGIC_HEADER_KEY = 'PHP_ERROR_MAGIC_HEADER';
+        const PHP_ERROR_MAGIC_HEADER_VALUE = 'php_stack_error';
         const MAGIC_IS_PRETTY_ERRORS_MARKER = '<!-- __magic_php_error_is_a_stack_trace_constant__ -->';
 
         /**
@@ -866,6 +881,9 @@
          * All options are optional, and so is passing in an options item.
          * You don't have to supply any, it's up to you.
          * 
+         * Note that if 'php_error.force_disable' is true, then this object
+         * will try to look like it works, but won't actually do anything.
+         * 
          * Includes:
          *  = Types of errors this will catch =
          *  - catch_ajax_errors         When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors. Defaults to true.
@@ -1062,20 +1080,24 @@
          * It's exposed because it has to be exposed.
          */
         public function __onShutdown() {
-            if ( $this->isOn() ) {
-                $error = error_get_last();
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                if ( $this->isOn() ) {
+                    $error = error_get_last();
 
-                // fatal and syntax errors
-                if (
-                        $error && (
-                                $error['type'] ===  1 ||
-                                $error['type'] ===  4 ||
-                                $error['type'] === 64
-                        )
-                ) {
-                    $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
-                } else {
-                    $this->endBuffer();
+                    // fatal and syntax errors
+                    if (
+                            $error && (
+                                    $error['type'] ===  1 ||
+                                    $error['type'] ===  4 ||
+                                    $error['type'] === 64
+                            )
+                    ) {
+                        $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
+                    } else {
+                        $this->endBuffer();
+                    }
                 }
             }
         }
@@ -1092,17 +1114,14 @@
          * This ensures that output_buffering is turned on.
          */
         private function startBuffer() {
-            /*
-             * Ensure output bufferring is on, cos we will need it laterz.
-             * 
-             * We also pass on any existing content, so it doesn't get lost.
-             */
-            if ( $this->catchAjaxErrors ) {
+            global $_php_error_is_ini_enabled;
+
+            if ( $_php_error_is_ini_enabled ) {
                 ini_set( 'implicit_flush', false );
                 ob_implicit_flush( false );
 
                 if ( ! @ini_get('output_buffering') ) {
-                    ini_set('output_buffering', 1);
+                    ini_set( 'output_buffering', 'on' );
                 }
 
                 $output = '';
@@ -1128,50 +1147,55 @@
          * This will inject JS into the output, before it is done.
          */
         private function endBuffer() {
-            if ( $this->catchAjaxErrors ) {
-                $content  = ob_get_contents();
-                $handlers = ob_list_handlers();
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                if ( !$this->isAjax && $this->catchAjaxErrors ) {
+                    $content  = ob_get_contents();
+                    $handlers = ob_list_handlers();
 
-                $this->isInEndBuffer = true;
-                for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
-                    $handler = $handlers[$i];
+                    $wasGZHandler = false;
+                    $this->isInEndBuffer = true;
+                    for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
+                        $handler = $handlers[$i];
 
-                    if (
-                            $handler === 'ob_gzhandler' ||
-                            $handler === 'default output handler'
-                    ) {
-                        ob_end_clean();
-                    } else {
-                        ob_end_flush();
+                        if ( $handler === 'ob_gzhandler' ) {
+                            $wasGZHandler = true;
+                            ob_end_clean();
+                        } else if ( $handler === 'default output handler' ) {
+                            ob_end_clean();
+                        } else {
+                            ob_end_flush();
+                        }
                     }
+                    $this->isInEndBuffer = false;
+
+                    if ( $this->bufferOutput ) {
+                        $content = $this->bufferOutput;
+                    }
+
+                    if ( $wasGZHandler ) {
+                        ob_start('ob_gzhandler');
+                    } else {
+                        ob_start();
+                    }
+                    
+                    $js = $this->getContent( 'displayJSInjection' );
+                    $js = JSMin::minify( $js );
+
+                    // attemp to inject the script into the HTML, after the doctype
+                    $matches = array();
+                    preg_match( BetterErrorsReporter::REGEX_DOCTYPE, $content, $matches );
+
+                    if ( $matches ) {
+                        $doctype = $matches[0];
+                        $content = preg_replace( BetterErrorsReporter::REGEX_DOCTYPE, "$doctype $js", $content );
+                    } else {
+                        echo $js;
+                    }
+
+                    echo $content;
                 }
-                $this->isInEndBuffer = false;
-
-                if ( $this->bufferOutput ) {
-                    $content = $this->bufferOutput;
-                }
-
-                if ( @ini_get('zlib.output_compression') ) {
-                    ob_start();
-                } else {
-                    ob_start('ob_gzhandler');
-                }
-                
-                $js = $this->getContent( 'displayJSInjection' );
-                $js = JSMin::minify( $js );
-
-                // attemp to inject the script into the HTML, after the doctype
-                $matches = array();
-                preg_match( BetterErrorsReporter::REGEX_DOCTYPE, $content, $matches );
-
-                if ( $matches ) {
-                    $doctype = $matches[0];
-                    $content = preg_replace( BetterErrorsReporter::REGEX_DOCTYPE, "$doctype $js", $content );
-                } else {
-                    echo $js;
-                }
-
-                echo $content;
             }
         }
 
@@ -1886,29 +1910,36 @@
          * This is the lowest entry point for error reporting,
          * and for that reason it can either take just error info,
          * or a combination of error and exception information.
+         * 
+         * Note that this will still log errors in the error log
+         * even when it's disabled with ini. It just does nothing
+         * more than that.
          */
         public function reportError( $code, $message, $errLine, $errFile, $stackTrace=null, $ex=null ) {
             $this->logError( $message, $errFile, $errLine, $ex, $stackTrace );
 
-            $root = $this->applicationRoot;
+            global $_php_error_is_ini_enabled;
+            if ( $_php_error_is_ini_enabled ) {
+                $root = $this->applicationRoot;
 
-            list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
-                    $this->improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, $stackTrace );
+                list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
+                        $this->improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, $stackTrace );
 
-            $errFile = $srcErrFile;
-            $errLine = $srcErrLine;
+                $errFile = $srcErrFile;
+                $errLine = $srcErrLine;
 
-            list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
+                list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
-            $errFile    = $this->removeRootPath( $root, $errFile );
-            $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
+                $errFile    = $this->removeRootPath( $root, $errFile );
+                $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
 
-            $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
+                $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
-            $this->displayError( $message, $srcErrLine, $errFile, $stackTrace, $fileLinesSets, $numFileLines );
+                $this->displayError( $message, $srcErrLine, $errFile, $stackTrace, $fileLinesSets, $numFileLines );
 
-            // exit in order to end processing
-            exit(0);
+                // exit in order to end processing
+                exit(0);
+            }
         }
 
         private function generateFileLineSets( $srcErrFile, $srcErrLine, &$stackTrace ) {
@@ -1946,33 +1977,41 @@
         }
 
         private function setEnabled( $isOn ) {
-            $wasOn = $this->isOn;
-            $this->isOn = $isOn;
+            global $_php_error_is_ini_enabled;
 
-            /*
-             * Only turn off, if we're moving from on to off.
-             * 
-             * This is so if it's turned off without turning on,
-             * we don't change anything.
-             */
-            if ( !$isOn ) {
-                if ( $wasOn ) {
-                    $this->runDisableErrors();
+            if ( $_php_error_is_ini_enabled ) {
+                $wasOn = $this->isOn;
+                $this->isOn = $isOn;
+
+                /*
+                 * Only turn off, if we're moving from on to off.
+                 * 
+                 * This is so if it's turned off without turning on,
+                 * we don't change anything.
+                 */
+                if ( !$isOn ) {
+                    if ( $wasOn ) {
+                        $this->runDisableErrors();
+                    }
+                /*
+                 * Always turn it on, even if already on.
+                 * 
+                 * This is incase it was messed up in some way
+                 * by the user.
+                 */
+                } else if ( $isOn ) {
+                    $this->runEnableErrors();
                 }
-            /*
-             * Always turn it on, even if already on.
-             * 
-             * This is incase it was messed up in some way
-             * by the user.
-             */
-            } else if ( $isOn ) {
-                $this->runEnableErrors();
             }
         }
 
         private function runDisableErrors() {
-            error_reporting( $this->defaultErrorReportingOff );
-            @ini_restore( 'html_errors', $this->iniHtmlErrors );
+            global $_php_error_is_ini_enabled;
+
+            if ( $_php_error_is_ini_enabled ) {
+                error_reporting( $this->defaultErrorReportingOff );
+                @ini_restore( 'html_errors', $this->iniHtmlErrors );
+            }
         }
 
         /*
@@ -1983,124 +2022,128 @@
          * we can catch fatal and compile time errors.
          */
         private function runEnableErrors() {
-            $catchSurpressedErrors = &$this->catchSurpressedErrors;
-            $self = $this;
+            global $_php_error_is_ini_enabled;
+            
+            if ( $_php_error_is_ini_enabled ) {
+                $catchSurpressedErrors = &$this->catchSurpressedErrors;
+                $self = $this;
 
-            // all errors \o/ !
-            error_reporting( $this->defaultErrorReportingOn );
-            ini_set( 'html_errors', false );
+                // all errors \o/ !
+                error_reporting( $this->defaultErrorReportingOn );
+                ini_set( 'html_errors', false );
 
-            set_error_handler(
-                    function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
-                        /*
-                         * DO NOT! log the error.
-                         * 
-                         * Either it's thrown as an exception, and so logged by the exception handler,
-                         * or we return false, and it's logged by PHP.
-                         * 
-                         * Also DO NOT! throw an exception, instead report it.
-                         * This is because if an operation raises both a user AND
-                         * fatal error (such as require), then the exception is
-                         * silently ignored.
-                         */
-                        if ( $self->isOn() ) {
+                set_error_handler(
+                        function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
                             /*
-                             * When using an @, the error reporting drops to 0.
+                             * DO NOT! log the error.
+                             * 
+                             * Either it's thrown as an exception, and so logged by the exception handler,
+                             * or we return false, and it's logged by PHP.
+                             * 
+                             * Also DO NOT! throw an exception, instead report it.
+                             * This is because if an operation raises both a user AND
+                             * fatal error (such as require), then the exception is
+                             * silently ignored.
                              */
-                            if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
-                                $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
-
-                                $self->reportException( $ex );
-                            }
-                        } else {
-                            return false;
-                        }
-                    },
-                    $this->defaultErrorReportingOn 
-            );
-
-            set_exception_handler( function($ex) use ( $self ) {
-                if ( $self->isOn() ) {
-                    $self->reportException( $ex );
-                } else {
-                    return false;
-                }
-            });
-
-            if ( ! $self->isShutdownRegistered ) {
-                if ( $self->catchClassNotFound ) {
-                    /*
-                     * When called, the callback will move it's self to the back of the list,
-                     * if it's not there already.
-                     * 
-                     * This is to avoid conflicting with other class loaders.
-                     */
-                    $classNotFoundFun = null;
-                    $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun ) {
-                        if ( $self->isOn() ) {
-                            $funs = spl_autoload_functions();
-
-                            if ( $funs[count($funs)-1] !== $classNotFoundFun ) {
+                            if ( $self->isOn() ) {
                                 /*
-                                 * You cannot change the registered functions when your
-                                 * in the middle.
-                                 * 
-                                 * So we re-arrange them dynamically.
+                                 * When using an @, the error reporting drops to 0.
                                  */
+                                if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
+                                    $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
 
-                                /*
-                                 * Remove everything before us.
-                                 */
-
-                                $ourIndex = 0;
-                                foreach ( $funs as $i => $fun ) {
-                                    spl_autoload_unregister( $fun );
-
-                                    if ( $fun === $classNotFoundFun ) {
-                                        $ourIndex = $i;
-                                        break;
-                                    }
+                                    $self->reportException( $ex );
                                 }
-
-                                /*
-                                 * Put us to the end, and re-call.
-                                 */
-
-                                spl_autoload_register( $classNotFoundFun );
-
-                                spl_autoload_call( $className );
-
-                                /*
-                                 * Then remove all class loaders,
-                                 * and re-set them up to be how they were,
-                                 * but with us moved to the end.
-                                 */
-                                spl_autoload_unregister( $classNotFoundFun );
-
-                                for ( $i = $ourIndex+1; $i < count($funs); $i++ ) {
-                                    spl_autoload_unregister( $funs[$i] );
-                                }
-
-                                foreach ( $funs as $fun ) {
-                                    if ( $fun !== $classNotFoundFun ) {
-                                        spl_autoload_register( $fun );
-                                    }
-                                }
-                                spl_autoload_register( $classNotFoundFun );
                             } else {
-                                $self->reportClassNotFound( $className );
+                                return false;
                             }
-                        }
-                    };
+                        },
+                        $this->defaultErrorReportingOn 
+                );
 
-                    spl_autoload_register( $classNotFoundFun );
-                }
-
-                register_shutdown_function( function() use ( $self ) {
-                    $self->__onShutdown();
+                set_exception_handler( function($ex) use ( $self ) {
+                    if ( $self->isOn() ) {
+                        $self->reportException( $ex );
+                    } else {
+                        return false;
+                    }
                 });
 
-                $self->isShutdownRegistered = true;
+                if ( ! $self->isShutdownRegistered ) {
+                    if ( $self->catchClassNotFound ) {
+                        /*
+                         * When called, the callback will move it's self to the back of the list,
+                         * if it's not there already.
+                         * 
+                         * This is to avoid conflicting with other class loaders.
+                         */
+                        $classNotFoundFun = null;
+                        $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun ) {
+                            if ( $self->isOn() ) {
+                                $funs = spl_autoload_functions();
+
+                                if ( $funs[count($funs)-1] !== $classNotFoundFun ) {
+                                    /*
+                                     * You cannot change the registered functions when your
+                                     * in the middle.
+                                     * 
+                                     * So we re-arrange them dynamically.
+                                     */
+
+                                    /*
+                                     * Remove everything before us.
+                                     */
+
+                                    $ourIndex = 0;
+                                    foreach ( $funs as $i => $fun ) {
+                                        spl_autoload_unregister( $fun );
+
+                                        if ( $fun === $classNotFoundFun ) {
+                                            $ourIndex = $i;
+                                            break;
+                                        }
+                                    }
+
+                                    /*
+                                     * Put us to the end, and re-call.
+                                     */
+
+                                    spl_autoload_register( $classNotFoundFun );
+
+                                    spl_autoload_call( $className );
+
+                                    /*
+                                     * Then remove all class loaders,
+                                     * and re-set them up to be how they were,
+                                     * but with us moved to the end.
+                                     */
+                                    spl_autoload_unregister( $classNotFoundFun );
+
+                                    for ( $i = $ourIndex+1; $i < count($funs); $i++ ) {
+                                        spl_autoload_unregister( $funs[$i] );
+                                    }
+
+                                    foreach ( $funs as $fun ) {
+                                        if ( $fun !== $classNotFoundFun ) {
+                                            spl_autoload_register( $fun );
+                                        }
+                                    }
+                                    spl_autoload_register( $classNotFoundFun );
+                                } else {
+                                    $self->reportClassNotFound( $className );
+                                }
+                            }
+                        };
+
+                        spl_autoload_register( $classNotFoundFun );
+                    }
+
+                    register_shutdown_function( function() use ( $self ) {
+                        $self->__onShutdown();
+                    });
+
+                    $self->isShutdownRegistered = true;
+                }
             }
         }
 
@@ -2110,8 +2153,51 @@
 
                 (function( window ) {
                     if ( window.XMLHttpRequest ) {
-                        var old = window.XMLHttpRequest;
- 
+                        /** 
+                         * A method wrapping helper function.
+                         * 
+                         * Wraps the method given, from the old prototype to the new
+                         * XMLHttpRequest prototype.
+                         * 
+                         * This only happens if the old one actually has that prototype.
+                         * If the browser doesn't support a prototype, then it doesn't
+                         * get wrapped.
+                         */
+                        var wrapMethod = function( XMLHttpRequest, old, prop ) {
+                            if ( old.prototype[prop] ) {
+                                var behaviours = ( arguments.length > 3 ) ?
+                                        Array.prototype.slice.call( arguments, 3 ) :
+                                        null ;
+
+                                XMLHttpRequest.prototype[prop] = function() {
+                                    if ( behaviours !== null ) {
+                                        for ( var i = 0; i < behaviours.length; i++ ) {
+                                            behaviours[i].apply( this, arguments );
+                                        }
+                                    }
+
+                                    return this.__.inner[prop].apply( this.__.inner, arguments );
+                                };
+                            }
+                        }
+
+                        var postMethod = function( XMLHttpRequest, prop ) {
+                            if ( XMLHttpRequest.prototype[prop] ) {
+                                var behaviours = Array.prototype.slice.call( arguments, 2 );
+
+                                var previous = XMLHttpRequest.prototype[prop];
+                                XMLHttpRequest.prototype[prop] = function() {
+                                    var r = previous.apply( this, arguments );
+
+                                    for ( var i = 0; i < behaviours.length; i++ ) {
+                                        behaviours[i].apply( this, arguments );
+                                    }
+
+                                    return r;
+                                };
+                            }
+                        }
+
                         /*
                          * Certain properties will error when read,
                          * and which ones do vary from browser to browser.
@@ -2131,11 +2217,18 @@
                             }
                         };
 
-                        var copyRequestProperties = function( src, dest, includeReadOnly ) {
+                        var copyResponseProperties = function( src, dest ) {
                             copyProperties( src, dest, [
-                                    'readyState',
                                     'response',
                                     'responseType',
+                                    'responseText',
+                                    'responseXML'
+                            ]);
+                        }
+
+                        var copyRequestProperties = function( src, dest, includeReadOnly, skipResponse ) {
+                            copyProperties( src, dest, [
+                                    'readyState',
                                     'timeout',
                                     'upload',
                                     'withCredentials',
@@ -2147,184 +2240,259 @@
 
                             if ( includeReadOnly ) {
                                 copyProperties( src, dest, [
-                                        'responseText',
-                                        'responseXML',
                                         'status',
                                         'statusText',
                                         'channel'
                                 ]);
+
+                                if ( ! skipResponse ) {
+                                    copyResponseProperties( src, dest );
+                                }
                             }
+
+                            return dest;
                         }
 
+                        var runFail = function( xmlHttpRequest ) {
+                            var body = document.body;
+                            var iframe = [
+                                    "<iframe ",
+                                    " width='100%'",
+                                    " height='100%'",
+                                    " style='",
+                                            '-webkit-transition: opacity 200ms linear;',
+                                            '-moz-transition: opacity 200ms linear;',
+                                            '-ms-transition: opacity 200ms linear;',
+                                            '-o-transition: opacity 200ms linear;',
+                                            'transition: opacity 200ms linear;',
+                                            'opacity: 0;',
+
+                                            'background:transparent;',
+                                            'position:fixed;',
+                                            'top:0;',
+                                            'left:0;',
+                                            'right:0;',
+                                            'bottom:0;',
+                                    "'",
+                                    ">",
+                                    '</iframe>'
+                            ].join('');
+
+                            var div = document.createElement('div');
+                            div.innerHTML = iframe;
+                            iframe = div.firstChild;
+                            div.removeChild( iframe );
+
+                            setTimeout( function() {
+                                var body = document.getElementsByTagName('body')[0];
+                                body.appendChild( iframe );
+
+                                var response = xmlHttpRequest.responseText;
+
+                                setTimeout( function() {
+                                    var iDoc = iframe.contentWindow || iframe.contentDocument;
+                                    if ( iDoc.document) {
+                                        iDoc = iDoc.document;
+                                    }
+
+                                    var iBody = iDoc.getElementsByTagName("body")[0];
+                                    iBody.innerHTML = response;
+
+                                    var iHead = iDoc.getElementsByTagName("head")[0];
+
+                                    // re-run the script tags
+                                    var scripts = iDoc.getElementsByTagName('script');
+                                    for ( var i = 0; i < scripts.length; i++ ) {
+                                        var script = scripts[i];
+                                        var parent = script.parentNode;
+
+                                        if ( parent ) {
+                                            parent.removeChild( script );
+
+                                            var newScript = iDoc.createElement('script');
+                                            newScript.innerHTML = script.innerHTML;
+
+                                            iHead.appendChild( newScript );
+                                        }
+                                    }
+
+                                    var closed = false;
+                                    var closeIFrame = function() {
+                                        if ( ! closed ) {
+                                            closed = true;
+
+                                            iframe.style.opacity = 0;
+
+                                            setTimeout( function() {
+                                                iframe.parentNode.removeChild( iframe );
+                                            }, 220 );
+                                        }
+                                    }
+
+                                    iDoc.getElementById('ajax-retry').onclick = function() {
+                                        // todo: re-run the ajax request
+                                        closeIFrame();
+                                        return false;
+                                    };
+
+                                    // setup the close handler
+                                    iDoc.getElementById('ajax-close').onclick = function() {
+                                        closeIFrame();
+                                        return false;
+                                    };
+
+                                    var html = iDoc.getElementsByTagName('html')[0];
+                                    html.setAttribute( 'class', 'ajax' );
+
+                                    setTimeout( function() {
+                                        iframe.style.opacity = 1;
+                                    }, 1 );
+                                }, 1 );
+                            }, 1 );
+                        }
+
+                        var old = window.XMLHttpRequest;
+
+                        /**
+                         * The middle man http request object.
+                         * 
+                         * Acts just like a normal one, but will show errors if they
+                         * occur instead of running the result.
+                         */
                         var XMLHttpRequest = function() {
                             var self = this,
                                 inner = new old();
 
-                            var isProcessing = true;
+                            /**
+                             * With a buggy XMLHttpRequest, it's possible to accidentally run the error handler
+                             * multiple times.
+                             * 
+                             * This is a flag to only do it once, to keep the code more defensive.
+                             */
+                            var errorOnce   = true,
+                                isAjaxError = false;
 
-                            inner.onreadystatechange = function() {
-                                copyRequestProperties( inner, self, true );
+                            var stateResults = [];
+
+                            inner.onreadystatechange = function( ev ) {
+                                copyRequestProperties( inner, self, true, true );
+
                                 var state = inner.readyState;
 
                                 /*
-                                 * This needs to be html-entitied and then decoded,
-                                 * so the JS cannot match this very line of code.
+                                 * Check headers for error.
                                  */
-                                var marker = '<?= htmlentities( BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER ) ?>'.
-                                        replace( '&gt;', '>' ).
-                                        replace( '&lt;', '<' );
+                                if ( ! isAjaxError && state >= 2 ) {
+                                    var header = inner.getResponseHeader( '<?= BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_KEY ?>' );
 
-                                if (
-                                        (state === 3 || state === 4) &&
-                                        inner.responseText !== null &&
-                                        inner.responseText.indexOf( marker ) !== -1
-                                ) {
-                                    isProcessing = false;
-
-                                    if ( state === 4 ) {
-                                        var body = document.body;
-                                        var iframe = [
-                                                "<iframe ",
-                                                " width='100%'",
-                                                " height='100%'",
-                                                " style='",
-                                                        '-webkit-transition: opacity 200ms linear;',
-                                                        '-moz-transition: opacity 200ms linear;',
-                                                        '-ms-transition: opacity 200ms linear;',
-                                                        '-o-transition: opacity 200ms linear;',
-                                                        'transition: opacity 200ms linear;',
-                                                        'opacity: 0;',
-
-                                                        'background:transparent;',
-                                                        'position:fixed;',
-                                                        'top:0;',
-                                                        'left:0;',
-                                                        'right:0;',
-                                                        'bottom:0;',
-                                                "'",
-                                                ">",
-                                                '</iframe>'
-                                        ].join('');
-
-                                        var div = document.createElement('div');
-                                        div.innerHTML = iframe;
-                                        iframe = div.firstChild;
-                                        div.removeChild( iframe );
-
-                                        var body = document.getElementsByTagName('body')[0];
-                                        body.appendChild( iframe );
-
-                                        var response = inner.responseText;
-
-                                        setTimeout( function() {
-                                            var iDoc = iframe.contentWindow || iframe.contentDocument;
-                                            if ( iDoc.document) {
-                                                iDoc = iDoc.document;
-                                            }
-
-                                            var iBody = iDoc.getElementsByTagName("body")[0];
-                                            iBody.innerHTML = inner;
-
-                                            var iHead = iDoc.getElementsByTagName("head")[0];
-
-                                            // re-run the script tags
-                                            var scripts = iDoc.getElementsByTagName('script');
-                                            for ( var i = 0; i < scripts.length; i++ ) {
-                                                var script = scripts[i];
-                                                var parent = script.parentNode;
-
-                                                if ( parent ) {
-                                                    parent.removeChild( script );
-
-                                                    var newScript = iDoc.createElement('script');
-                                                    newScript.innerHTML = script.innerHTML;
-
-                                                    iHead.appendChild( newScript );
-                                                }
-                                            }
-
-                                            var closed = false;
-
-                                            // setup the close handler
-                                            iDoc.getElementById('ajax-close').onclick = function() {
-                                                if ( ! closed ) {
-                                                    closed = true;
-
-                                                    iframe.style.opacity = 0;
-
-                                                    setTimeout( function() {
-                                                        iframe.parentNode.removeChild( iframe );
-                                                    }, 220 );
-                                                }
-                                                return false;
-                                            };
-
-                                            var html = iDoc.getElementsByTagName('html')[0];
-                                            html.setAttribute( 'class', 'ajax' );
-
-                                            setTimeout( function() {
-                                                iframe.style.opacity = 1;
-                                            }, 1 );
-                                        }, 1 );
+                                    if ( header !== null ) {
+                                        self.__.isAjaxError = true;
+                                        isAjaxError = true;
                                     }
                                 }
-                                
-                                if ( self.onreadystatechange && isProcessing ) {
-                                    self.onreadystatechange.apply( this, arguments );
+
+                                if ( ! isAjaxError && state >= 2 ) {
+                                    copyResponseProperties( inner, self );
+                                }
+
+                                /*
+                                 * Success ! \o/
+                                 * 
+                                 * Pass any state change on to the parent caller,
+                                 * unless we hit an ajaxy error.
+                                 */
+                                if ( !isAjaxError && self.onreadystatechange ) {
+                                    /*
+                                     * One of three things happens:
+                                     *  = cache the requests until we know there is no error (state 4)
+                                     *  = we know there is no error, and so we run our cache
+                                     *  = cache is done, but we've been called again, so just pass it on
+                                     */
+                                    if ( state < 4 ) {
+                                        stateResults.push( copyRequestProperties(self, {}, true) );
+                                    } else {
+                                        if ( stateResults !== null ) {
+                                            var currentState = copyRequestProperties( self, {}, true );
+
+                                            for ( var i = 0; i < stateResults.length; i++ ) {
+                                                var store = stateResults[i];
+                                                copyRequestProperties( store, self, true );
+
+                                                // must check a second time here,
+                                                // in case it gets changed within an onreadystatechange
+                                                if ( self.onreadystatechange ) {
+                                                    self.onreadystatechange( ev );
+                                                }
+                                            }
+
+                                            copyRequestProperties( currentState, self, true );
+                                            stateResults = null;
+                                        }
+
+                                        if ( self.onreadystatechange ) {
+                                            self.onreadystatechange( ev );
+                                        }
+                                    }
+                                }
+
+                                /*
+                                 * Fail : (
+                                 */
+                                if (
+                                        isAjaxError &&
+                                        state === 4 &&
+                                        errorOnce
+                                ) {
+                                    errorOnce = false;
+                                    runFail( inner );
                                 }
                             };
 
                             copyRequestProperties( inner, this, true );
-                            this.__innerXMLHttpRequest = inner;
+
+                            /*
+                             * Private fields are stored underneath an unhappy face,
+                             * to localize them.
+                             * 
+                             * Access becomes:
+                             *  this.__.fieldName
+                             */
+                            this.__ = {
+                                inner: inner,
+                                isAjaxError: false,
+                                isSynchronous: false
+                            };
                         }
-                        XMLHttpRequest.prototype = {
-                            open: function() {
-                                copyRequestProperties( this, this.__innerXMLHttpRequest );
-                                return old.prototype.open.apply( this.__innerXMLHttpRequest, arguments );
-                            },
-                            abort: function() {
-                                copyRequestProperties( this, this.__innerXMLHttpRequest );
-                                return old.prototype.abort.apply( this.__innerXMLHttpRequest, arguments );
-                            },
-                            send: function() {
-                                copyRequestProperties( this, this.__innerXMLHttpRequest );
-
-                                /*
-                                 * Ensure this header was set,
-                                 * just incase it was not.
-                                 */
-                                this.__innerXMLHttpRequest.setRequestHeader( 'HTTP_X_REQUESTED_WITH', 'XMLHttpRequest' );
-
-                                return old.prototype.send.apply( this.__innerXMLHttpRequest, arguments );
-                            }
-                        };
 
                         /*
-                         * Methods - includes non-standard methods
+                         * We build the methods for the fake XMLHttpRequest.
                          */
 
-                        var wrapProperties = [
-                                // standard
-                                'getAllResponseHeaders',
-                                'getResponseHeader',
-                                'setRequestHeader',
-                                'overrideMimeType',
-
-                                // non-standard
-                                'sendAsBinary'
-                        ];
-
-                        for ( var k in wrapProperties ) {
-                            var prop = wrapProperties[k];
-
-                            (function(prop) {
-                                if ( old.prototype[prop] ) {
-                                    XMLHttpRequest.prototype[prop] = function() {
-                                        return this.__innerXMLHttpRequest[prop].apply( this.__innerXMLHttpRequest, arguments );
-                                    };
-                                }
-                            })( prop );
+                        var copyIn = function() {
+                            copyRequestProperties( this, this.__.inner );
                         }
+                        var copyOut = function() {
+                            copyRequestProperties( this.__.inner, this, true, this.__.isSynchronous && this.__.isAjaxError );
+                        }
+                        var addHeader = function() {
+                            this.__.inner.setRequestHeader( 'HTTP_X_REQUESTED_WITH', 'XMLHttpRequest' );
+                        }
+                        var isSynchronous = function( args ) {
+                            this.__.isSynchronous = ( args[2] === false );
+                        }
+
+                        wrapMethod( XMLHttpRequest, old, 'open'        , copyIn, isSynchronous );
+                        wrapMethod( XMLHttpRequest, old, 'abort'       , copyIn );
+                        wrapMethod( XMLHttpRequest, old, 'send'        , copyIn, addHeader );
+                        wrapMethod( XMLHttpRequest, old, 'sendAsBinary', copyIn, addHeader );
+
+                        postMethod( XMLHttpRequest,      'send'        , copyOut );
+                        postMethod( XMLHttpRequest,      'sendAsBinary', copyOut );
+
+                        wrapMethod( XMLHttpRequest, old, 'getAllResponseHeaders' );
+                        wrapMethod( XMLHttpRequest, old, 'getResponseHeader'     );
+                        wrapMethod( XMLHttpRequest, old, 'setRequestHeader'      );
+                        wrapMethod( XMLHttpRequest, old, 'overrideMimeType'      );
 
                         window.XMLHttpRequest = XMLHttpRequest;
                     }
@@ -2341,7 +2509,7 @@
             $serverName      = $this->serverName;
             $backgroundText  = $this->backgroundText;
             $requestUrl      = $_SERVER['REQUEST_URI'];
-            
+
             $this->displayHTML(
                     // pre, in the head
                     function() use( $message, $errFile, $errLine ) {
@@ -2364,7 +2532,11 @@
                             </div>
                         <? } ?>
                         <h2 id="error-file-root"><?= $serverName ?> | <?= $applicationRoot ?></h2>
-                        <h2 id="ajax-info"><span id="ajax-tab">AJAX</span> <?= $serverName ?><?= $requestUrl ?></h2>
+                        <h2 id="ajax-info">
+                            <span id="ajax-tab" class="ajax-button">AJAX</span> <?= $serverName ?><?= $requestUrl ?>
+                            <a href="#" id="ajax-close" class="ajax-button">X</a>
+                            <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
+                        </h2>
                         <h1 id="error-title"><?= $message ?></h1>
                         <h2 id="error-file" class="<?= $fileLinesSets ? 'has_code' : '' ?>"><?= $errFile ?>, <?= $errLine ?></h2>
                         <? if ( $fileLinesSets ) { ?>
@@ -2404,7 +2576,7 @@
                             "use strict";
 
                             $(document).ready( function() {
-                                $('#ajax-close').click( function(ev) {
+                                $('#ajax-close', '#ajax-retry').click( function(ev) {
                                     ev.preventDefault();
                                 });
 
@@ -2481,12 +2653,14 @@
 
             // clean out anything displayed already
             try {
-                ob_end_clean();
-                ob_start("ob_gzhandler");
+                ob_clean();
+//                ob_end_clean();
+//                ob_start("ob_gzhandler");
             } catch ( Exception $ex ) { /* do nothing */ }
 
+            header( BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_VALUE );
+
             echo '<!DOCTYPE html>';
-            echo BetterErrorsReporter::MAGIC_IS_PRETTY_ERRORS_MARKER;
 
             if ( $head !== null ) {
                 $head();
@@ -2541,7 +2715,7 @@
                             background: #111;
                             width: 100%;
 
-                            padding: 16px 32px;
+                            padding: 18px 24px;
                             -moz-box-sizing: border-box;
                             box-sizing: border-box;
 
@@ -2566,56 +2740,51 @@
                             height: auto;
                         }
 
-                #ajax-close,
                 #ajax-info {
                     display: none;
+                    line-height: 100%;
                 }
-                    html.ajax #ajax-close,
                     html.ajax #ajax-info {
                         display: block;
                     }
                     html.ajax #error-file-root {
                         display: none;
                     }
-                #ajax-tab {
-                    padding: 0 18px;
-
-                    left: 0;
-                    top: 24px;
-
-                    color: #bbb;
-
-                    background: #359;
+                .ajax-button {
+                    padding: 3px 12px;
+                    margin-top: -3px;
                     border-radius: 3px;
+                    color: #bbb;
                 }
-                #ajax-close {
-                    position: absolute;
-                    right: -18px;
-                    top  : -18px;
-                    background: #622;
-
-                    color: #ccc;
-
-                    font: 21px arial;
-                    font-weight: 900;
-                    line-height: 38px;
-                    min-width  : 38px;
-                    text-align : center;
-
-                    border-radius: 300px;
-                    box-shadow: 3px 3px 11px rgba(0,0,0,0.25);
-
-                }
-                    #ajax-close:hover {
-                        background: #944;
-                        color: #fff;
-                    }
-                #ajax-close,
-                #ajax-close:visited,
-                #ajax-close:active,
-                #ajax-close:hover {
+                .ajax-button,
+                .ajax-button:visited,
+                .ajax-button:active,
+                .ajax-button:hover {
                     text-decoration: none;
                 }
+                a.ajax-button:hover {
+                    color: #fff;
+                }
+                #ajax-tab {
+                    background: #359;
+                    float: left;
+                    margin-right: 12px;
+                }
+                #ajax-retry {
+                    float: right;
+                    background: #0E4973;
+                    margin-right: 12px;
+                }
+                    #ajax-retry:hover {
+                        background: #0C70B7;
+                    }
+                #ajax-close {
+                    float: right;
+                    background: #622;
+                }
+                    #ajax-close:hover {
+                        background: #aa4040;
+                    }
 
                 <?
                  /*
@@ -2711,9 +2880,11 @@
                     cursor: pointer;
                 }
                     .error-stack-trace-line {
+                        -moz-box-sizing: border-box;
+                        box-sizing: border-box;
+
                         width: 100%;
                         padding: 3px 18px;
-                        margin-left: -18px;
                         border-radius: 2px;
                     }
                 <?
@@ -2860,7 +3031,7 @@
                 }
             </style><?
 
-            ?><div class="background"><a href="#" id="ajax-close">X</a><?
+            ?><div class="background"><?
                 $body();
             ?></div><?
 
