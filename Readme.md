@@ -62,6 +62,8 @@ An optional array of parameters when you call 'reportErrors'.
 php.ini options
 ---------------
 
+Add these to your php.ini, or other .ini files, as global options for PHP-Error.
+
 ### php_error.force_disabled
 
 When set to 'on', the error reporter will look and act like it's running, but really it does nothing.
