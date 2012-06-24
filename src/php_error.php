@@ -191,7 +191,7 @@
          * 
          * So '9' will be the error line + 4 lines above + 4 lines below.
          */
-        const NUM_FILE_LINES = 8;
+        const NUM_FILE_LINES = 13;
 
         const FILE_TYPE_APPLICATION = 1;
         const FILE_TYPE_IGNORE      = 2;
@@ -795,6 +795,18 @@
             }
         }
 
+        private static function folderTypeToCSS( $type ) {
+            if ( $type === BetterErrorsReporter::FILE_TYPE_ROOT ) {
+                return 'file-root';
+            } else if ( $type === BetterErrorsReporter::FILE_TYPE_IGNORE ) {
+                return 'file-ignore';
+            } else if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
+                return 'file-app';
+            } else {
+                return 'file-common';
+            }
+        }
+
         private static function isFolderType( &$folders, $longest, $file ) {
             $parts = explode( '/', $file );
 
@@ -1303,14 +1315,31 @@
                 if ( $lines ) {
                     $numLines = $this->numLines;
 
+                    $searchDist = (int)( $numLines/2 );
+                    $countLines = count( $lines );
+
                     /*
-                     * This ensures we attempt to always get NUM_FILE_LINES
-                     * number of lines, if we are at the top of the file,
-                     * for consistency.
+                     * Search around the errLine.
+                     * We should aim get half of the lines above, and half from below.
+                     * If that fails we get as many as we can.
                      */
-                    $searchDown = (int)( $numLines/2 );
-                    $minLine = max( 0, $errLine-$searchDown );
-                    $maxLine = min( $minLine+$numLines, count($lines) );
+
+                    /*
+                     * If we are near the bottom edge,
+                     * we go down as far as we can,
+                     * then work up the search area.
+                     */
+                    if ( $errLine+$searchDist > $countLines ) {
+                        $minLine = max( 0, $countLines-$numLines );
+                        $maxLine = $countLines;
+                    /*
+                     * Go up as far as we can, up to half the search area.
+                     * Then stretch down the whole search area.
+                     */
+                    } else {
+                        $minLine = max( 0, $errLine-$searchDist );
+                        $maxLine = min( $minLine+$numLines, count($lines) );
+                    }
 
                     $fileLines = array_splice( $lines, $minLine, $maxLine-$minLine );
 
@@ -1786,18 +1815,9 @@
                             $klass = '';
 
                             list( $type, $file ) = $this->getFolderType( $root, $trace['file'] );
+                            $klass = BetterErrorsReporter::folderTypeToCSS( $type );
 
-                            if ( $type === BetterErrorsReporter::FILE_TYPE_ROOT ) {
-                                $klass = 'file-root';
-                            } else if ( $type === BetterErrorsReporter::FILE_TYPE_IGNORE ) {
-                                $klass = 'file-ignore';
-                            } else if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
-                                $klass = 'file-app';
-                            } else {
-                                $klass = 'file-common';
-                            }
-
-                            $trace['html_file'] = "<span class='$klass'>$file</span>";
+                            $trace['html_file'] = "<span class='filename $klass'>$file</span>";
                             $trace['is_native'] = false;
                         } else {
                             $file = '[Internal PHP]';
@@ -1831,6 +1851,8 @@
                     if ( $trace ) {
                         $line     = str_pad( $trace['line']     , $lineLen, ' ', STR_PAD_LEFT  );
                         $file     = $trace['html_file'] . str_pad( '', $fileLen-strlen($trace['file']), ' ', STR_PAD_LEFT );
+
+                        $line = "<span class='linenumber'>$line</span>";
 
                         $info = $trace['info'];
                         $info = str_replace( "\n", '\n', $info );
@@ -1930,12 +1952,15 @@
 
                 list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
-                $errFile    = $this->removeRootPath( $root, $errFile );
-                $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
+                $errFileType = BetterErrorsReporter::folderTypeToCSS(
+                        $this->getFolderType( $root, $errFile )
+                );
+                $errFile     = $this->removeRootPath( $root, $errFile );
+                $stackTrace  = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
 
                 $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
-                $this->displayError( $message, $srcErrLine, $errFile, $stackTrace, $fileLinesSets, $numFileLines );
+                $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines );
 
                 // exit in order to end processing
                 exit(0);
@@ -2283,6 +2308,11 @@
                             iframe = div.firstChild;
                             div.removeChild( iframe );
 
+                            /*
+                             * Placed inside a timeout, incase the document doesn't exist yet.
+                             * 
+                             * Can happen if the page ajax's straight away.
+                             */
                             setTimeout( function() {
                                 var body = document.getElementsByTagName('body')[0];
                                 body.appendChild( iframe );
@@ -2504,11 +2534,11 @@
          * The actual display logic.
          * This outputs the error details in HTML.
          */
-        private function displayError( $message, $errLine, $errFile, $stackTrace, &$fileLinesSets, $numFileLines ) {
+        private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines ) {
             $applicationRoot = $this->applicationRoot;
             $serverName      = $this->serverName;
             $backgroundText  = $this->backgroundText;
-            $requestUrl      = $_SERVER['REQUEST_URI'];
+            $requestUrl      = str_replace( $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
 
             $this->displayHTML(
                     // pre, in the head
@@ -2523,7 +2553,7 @@
                     function() use (
                             $requestUrl,
                             $backgroundText, $serverName, $applicationRoot,
-                            $message, $errLine, $errFile, $stackTrace,
+                            $message, $errLine, $errFile, $errFileType, $stackTrace,
                             &$fileLinesSets, $numFileLines
                     ) {
                         if ( $backgroundText ) { ?>
@@ -2533,12 +2563,15 @@
                         <? } ?>
                         <h2 id="error-file-root"><?= $serverName ?> | <?= $applicationRoot ?></h2>
                         <h2 id="ajax-info">
-                            <span id="ajax-tab" class="ajax-button">AJAX</span> <?= $serverName ?><?= $requestUrl ?>
-                            <a href="#" id="ajax-close" class="ajax-button">X</a>
-                            <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
+                            <span id="ajax-tab" class="ajax-button">AJAX</span>
+                            <span class="ajax-url"><?= $serverName ?><?= $requestUrl ?></span>
+                            <span class="ajax-buttons">
+                                <a href="#" id="ajax-close" class="ajax-button">X</a>
+                                <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
+                            </span>
                         </h2>
                         <h1 id="error-title"><?= $message ?></h1>
-                        <h2 id="error-file" class="<?= $fileLinesSets ? 'has_code' : '' ?>"><?= $errFile ?>, <?= $errLine ?></h2>
+                        <h2 id="error-file" class="<?= $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?= $errLine ?></span> <span id="error-filename" class="<?= $errFileType ?>"><?= $errFile ?></span></h2>
                         <? if ( $fileLinesSets ) { ?>
                             <div id="error-files">
                                 <ul class="error-file-force-size"><?
@@ -2585,6 +2618,9 @@
                                         lines = $('#error-files .error-file-lines'),
                                         currentID = '#' + lines.filter( '.show' ).attr( 'id' );
 
+                                    var filename   = $('#error-filename'),
+                                        linenumber = $('#error-linenumber');
+
                                     $( '.error-stack-trace-line' ).
                                             mouseover( function() {
                                                 var $this = $(this);
@@ -2615,6 +2651,14 @@
 
                                                             lines.removeClass( 'show' );
                                                             lines.filter( currentID ).addClass( 'show' );
+
+                                                            var $file = $this.find('.filename');
+                                                            var file = $file.text(),
+                                                                line = $this.find('.linenumber').text();
+
+                                                            filename.text( file );
+                                                            filename.attr( 'class', $file.attr('class') );
+                                                            linenumber.text( line );
                                                         }
                                                     }
                                                 }
@@ -2742,7 +2786,10 @@
 
                 #ajax-info {
                     display: none;
+                    position: relative;
                     line-height: 100%;
+
+                    white-space: nowrap;
                 }
                     html.ajax #ajax-info {
                         display: block;
@@ -2770,21 +2817,26 @@
                     float: left;
                     margin-right: 12px;
                 }
-                #ajax-retry {
-                    float: right;
-                    background: #0E4973;
-                    margin-right: 12px;
+                .ajax-buttons {
+                    position: absolute;
+                    right: 0;
+                    top: 0;
                 }
-                    #ajax-retry:hover {
-                        background: #0C70B7;
+                    #ajax-retry {
+                        float: right;
+                        background: #0E4973;
+                        margin-right: 12px;
                     }
-                #ajax-close {
-                    float: right;
-                    background: #622;
-                }
-                    #ajax-close:hover {
-                        background: #aa4040;
+                        #ajax-retry:hover {
+                            background: #0C70B7;
+                        }
+                    #ajax-close {
+                        float: right;
+                        background: #622;
                     }
+                        #ajax-close:hover {
+                            background: #aa4040;
+                        }
 
                 <?
                  /*
@@ -2820,8 +2872,14 @@
                  */
                 ?>
                 #error-file.has_code {
-                    margin: 36px 0 -6px 128px;
+                    margin: 24px 0 -6px 167px;
                 }
+                    #error-linenumber {
+                        position: absolute;
+                        text-align: right;
+                        left: 0;
+                        width: 178px;
+                    }
                 #ajax-info,
                 #error-file-root {
                     color: #666;
@@ -2829,7 +2887,7 @@
                 #error-files {
                     position: relative;
                     margin-left  : 128px;
-                    margin-bottom: 38px;
+                    margin-bottom: 24px;
                     padding: 0 18px 9px 0;
 
                     display: inline-block;
@@ -2838,7 +2896,7 @@
                     }
                     .error-file-lines {
                         position: absolute;
-                        top : 18px;
+                        top : 0;
                         left: 0;
 
                         display: inline-block;
