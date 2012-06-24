@@ -477,10 +477,6 @@
                 if ( is_array($token) ) {
                     $type = $token[0];
                     $code = $token[1];
-
-                    if ( $type === T_CONSTANT_ENCAPSED_STRING ) {
-                        $code = htmlspecialchars( $code );
-                    }
                 } else {
                     $type = null;
                     $code = $token;
@@ -497,13 +493,12 @@
                         $next = $tokens[$i+1];
 
                         if ( is_array($next) && $next[0] === T_VARIABLE ) {
-                            $code = '&amp;';
                             $type = 'reference_ampersand';
                         }
                     }
                 } else if ( $code === '"' || $code === "'" ) {
                     if ( $inString ) {
-                        $html[]= "<span class='syntax-string'>" . join('', $stringBuff) . "$code</span>";
+                        $html[]= "<span class='syntax-string'>" . join('', $stringBuff) . htmlspecialchars($code) . "</span>";
                         $stringBuff = null;
                         $skip = true;
                     } else {
@@ -511,8 +506,6 @@
                     }
 
                     $inString = !$inString;
-                } else if ( $code === '->' ) {
-                    $code = '-&gt;';
                 } else if ( $type === T_STRING ) {
                     $matches = array();
                     preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $code, $matches);
@@ -525,6 +518,8 @@
                 if ( $skip ) {
                     $skip = false;
                 } else {
+                    $code = htmlspecialchars( $code );
+
                     if ( $type !== null && isset($syntaxMap[$type]) ) {
                         $class = $syntaxMap[$type];
 
@@ -1160,7 +1155,7 @@
          */
         private function endBuffer() {
             global $_php_error_is_ini_enabled;
-            
+
             if ( $_php_error_is_ini_enabled ) {
                 if ( !$this->isAjax && $this->catchAjaxErrors ) {
                     $content  = ob_get_contents();
@@ -1191,7 +1186,7 @@
                     } else {
                         ob_start();
                     }
-                    
+       
                     $js = $this->getContent( 'displayJSInjection' );
                     $js = JSMin::minify( $js );
 
@@ -1205,7 +1200,7 @@
                     } else {
                         echo $js;
                     }
-
+      
                     echo $content;
                 }
             }
@@ -1759,10 +1754,14 @@
                         }
                     } else if ( get_class($arg) === 'Closure' ) {
                         return '<span class="syntax-variable">$Closure</span>()';
-                    } else if ( preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $arg) ) {
-                        return '<span class="syntax-literal">$' . get_class( $arg ) . '</span>';
                     } else {
-                        return '<span class="syntax-variable">$' . get_class( $arg ) . '</span>';
+                        $argKlass = get_class( $arg );
+
+                        if ( preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $argKlass) ) {
+                            return '<span class="syntax-literal">$' . $argKlass . '</span>';
+                        } else {
+                            return '<span class="syntax-variable">$' . $argKlass . '</span>';
+                        }
                     }
                 };
 
@@ -1963,6 +1962,7 @@
                 $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines );
 
                 // exit in order to end processing
+                $this->turnOff();
                 exit(0);
             }
         }
@@ -2298,6 +2298,7 @@
                                             'left:0;',
                                             'right:0;',
                                             'bottom:0;',
+                                            'z-index: 100000',
                                     "'",
                                     ">",
                                     '</iframe>'
@@ -2308,6 +2309,8 @@
                             iframe = div.firstChild;
                             div.removeChild( iframe );
 
+                            var response = xmlHttpRequest.responseText;
+
                             /*
                              * Placed inside a timeout, incase the document doesn't exist yet.
                              * 
@@ -2316,8 +2319,6 @@
                             setTimeout( function() {
                                 var body = document.getElementsByTagName('body')[0];
                                 body.appendChild( iframe );
-
-                                var response = xmlHttpRequest.responseText;
 
                                 setTimeout( function() {
                                     var iDoc = iframe.contentWindow || iframe.contentDocument;
@@ -2694,7 +2695,7 @@
                 $body = $head;
                 $head = null;
             }
-
+       
             // clean out anything displayed already
             try {
                 ob_clean();
@@ -2754,7 +2755,6 @@
                     font: 24px consolas;
                     margin-top: 0;
                 }
-
                         .background {
                             background: #111;
                             width: 100%;
@@ -2766,6 +2766,7 @@
                             position: relative;
 
                             height: 100%;
+                            overflow: scroll;
                         }
                 html.ajax {
                     background: transparent;
@@ -2782,6 +2783,9 @@
                             box-shadow: 5px 8px 18px rgba( 0, 0, 0, 0.4 );
 
                             height: auto;
+                            min-height: 0;
+
+                            overflow: auto;
                         }
 
                 #ajax-info {
