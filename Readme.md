@@ -62,7 +62,7 @@ An optional array of parameters when you call 'reportErrors'.
 php.ini options
 ---------------
 
-# php_error.force_disabled
+## php_error.force_disabled
 
 When set to 'on', the error reporter will look and act like it's running, but really it does nothing.
 No setup changes, no error reporting, and no other work.
