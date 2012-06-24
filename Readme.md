@@ -10,6 +10,7 @@ When an error strikes, the page is replaced with a full stack trace, syntax high
 Features
 --------
  * trivial to use, it's just one file
+ * errors displayed in the browser for normal and ajaxy requests
  * makes errors as strict as possible (encourages code quality, and tends to improve performance)
  * code snippets across the whole stack trace
  * provides more information (such as full function signatures)
@@ -57,3 +58,20 @@ Customization
 -------------
 
 An optional array of parameters when you call 'reportErrors'.
+
+php.ini options
+---------------
+
+# php_error.force_disabled
+
+When set to 'on', the error reporter will look and act like it's running, but really it does nothing.
+No setup changes, no error reporting, and no other work.
+
+```
+    php_error.force_disabled = On
+```
+
+If you manually call 'turnOn', it on will also silently fail, and still be set to turned off.
+
+My advice is to never put PHP-error into production. This option exists incase you forget,
+so you can disable it for all of your sites as a part of your global configuration.
