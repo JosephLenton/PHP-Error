@@ -2568,7 +2568,9 @@
                             <span class="ajax-url"><?= $serverName ?><?= $requestUrl ?></span>
                             <span class="ajax-buttons">
                                 <a href="#" id="ajax-close" class="ajax-button">X</a>
+<? /*
                                 <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
+*/?>
                             </span>
                         </h2>
                         <h1 id="error-title"><?= $message ?></h1>
@@ -2766,7 +2768,7 @@
                             position: relative;
 
                             height: 100%;
-                            overflow: scroll;
+                            overflow: auto;
                         }
                 html.ajax {
                     background: transparent;
@@ -2785,7 +2787,7 @@
                             height: auto;
                             min-height: 0;
 
-                            overflow: auto;
+                            overflow: visible;
                         }
 
                 #ajax-info {
@@ -2876,7 +2878,7 @@
                  */
                 ?>
                 #error-file.has_code {
-                    margin: 24px 0 -6px 167px;
+                    margin: 24px 0 0 167px;
                 }
                     #error-linenumber {
                         position: absolute;
