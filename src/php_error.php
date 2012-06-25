@@ -2212,10 +2212,10 @@
 
                                 var previous = XMLHttpRequest.prototype[prop];
                                 XMLHttpRequest.prototype[prop] = function() {
-                                    var r = previous.call( this, arguments, prop );
+                                    var r = previous.apply( this, arguments );
 
                                     for ( var i = 0; i < behaviours.length; i++ ) {
-                                        behaviours[i].apply( this, arguments );
+                                        behaviours[i].call( this, arguments, prop );
                                     }
 
                                     return r;
