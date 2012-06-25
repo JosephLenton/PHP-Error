@@ -7,6 +7,12 @@ PHP errors are not good enough for development, it's as simple as that. This aim
 
 When an error strikes, the page is replaced with a full stack trace, syntax highlighting, and all displayed to be readable.
 
+It works on ajax requests, displaying the server side error in the browser when it occurres, and pauses the request allowing you to automatically retry it.
+
+![ajax server stack trace](http://i.imgur.com/WRgug.png)
+
+This requires no changes to your JavaScript, and works with existing JS libraries such as jQuery.
+
 Features
 --------
  * trivial to use, it's just one file
