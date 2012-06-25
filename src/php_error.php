@@ -1953,12 +1953,10 @@
 
                 list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
-                list( $type, $_ ) = $this->getFolderType( $root, $errFile );
+                list( $type, $errFile ) = $this->getFolderType( $root, $errFile );
                 $errFileType = BetterErrorsReporter::folderTypeToCSS( $type );
 
-                $errFile     = $this->removeRootPath( $root, $errFile );
-                $stackTrace  = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
-
+                $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
                 $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
                 $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines );
