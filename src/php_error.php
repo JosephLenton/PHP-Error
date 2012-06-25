@@ -113,7 +113,7 @@
      */
     if ( ! isset($_php_error_global_handler) ) {
         $_php_error_global_handler = null;
-        $_php_error_is_ini_enabled = ! @ini_get( 'php_error.force_disabled' );
+        $_php_error_is_ini_enabled = ! @get_cfg_var( 'php_error.force_disabled' );
     }
 
     /**
