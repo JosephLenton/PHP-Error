@@ -18,10 +18,12 @@ Features
  * syntax highlighting
  * looks pretty!
 
+There is an online demo [here](http://phperror.net)
+
 Example Usage
 -------------
 
- * [Get the library](https://github.com/JosephLenton/PHP-Error/blob/master/src/php_error.php), it's just one file.
+ * [Get the library](http://phperror.net/download/php_error.php), it's just one file.
  * Place it into your project.
  * import the file
  * call: \better_error_messages\reportErrors();
@@ -53,11 +55,6 @@ Advanced Features
  * application files; these are prioritized when an error strikes!
  
 ![Application Aware Stack Trace](http://i.imgur.com/qdwnb.png)
-
-Customization
--------------
-
-An optional array of parameters when you call 'reportErrors'.
 
 php.ini options
 ---------------
