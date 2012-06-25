@@ -1953,9 +1953,9 @@
 
                 list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
-                $errFileType = BetterErrorsReporter::folderTypeToCSS(
-                        $this->getFolderType( $root, $errFile )
-                );
+                list( $type, $_ ) = $this->getFolderType( $root, $errFile );
+                $errFileType = BetterErrorsReporter::folderTypeToCSS( $type );
+
                 $errFile     = $this->removeRootPath( $root, $errFile );
                 $stackTrace  = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
 
