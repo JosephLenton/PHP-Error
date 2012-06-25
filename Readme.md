@@ -19,6 +19,7 @@ Features
 --------
  * trivial to use, it's just one file
  * errors displayed in the browser for normal and ajaxy requests
+ * ajax requests are paused, allowing you to automatically re-run them
  * makes errors as strict as possible (encourages code quality, and tends to improve performance)
  * code snippets across the whole stack trace
  * provides more information (such as full function signatures)
