@@ -9,7 +9,7 @@
 <script>
 	$(document).ready( function() {
 		$.get( '/example/unknown_variable.php', function(str) {
-			console.log('success!');
+			console.log( str );
 		} );
 	});
 </script>

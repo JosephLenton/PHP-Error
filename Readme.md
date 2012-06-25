@@ -45,6 +45,8 @@ All of that is awesome if you want to debug quicker, and force high quality stan
 
 On a production server, that sucks, and is potentially unsafe.
 
+In case you forget, you can disable this in production using the 'php_error.force_disabled' php.ini option (see below).
+
 Advanced Features
 -----------------
 

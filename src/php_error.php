@@ -2197,7 +2197,7 @@
                                 XMLHttpRequest.prototype[prop] = function() {
                                     if ( behaviours !== null ) {
                                         for ( var i = 0; i < behaviours.length; i++ ) {
-                                            behaviours[i].apply( this, arguments );
+                                            behaviours[i].call( this, arguments, prop );
                                         }
                                     }
 
@@ -2212,7 +2212,7 @@
 
                                 var previous = XMLHttpRequest.prototype[prop];
                                 XMLHttpRequest.prototype[prop] = function() {
-                                    var r = previous.apply( this, arguments );
+                                    var r = previous.call( this, arguments, prop );
 
                                     for ( var i = 0; i < behaviours.length; i++ ) {
                                         behaviours[i].apply( this, arguments );
@@ -2245,7 +2245,6 @@
                         var copyResponseProperties = function( src, dest ) {
                             copyProperties( src, dest, [
                                     'response',
-                                    'responseType',
                                     'responseText',
                                     'responseXML'
                             ]);
@@ -2257,6 +2256,7 @@
                                     'timeout',
                                     'upload',
                                     'withCredentials',
+                                    'responseType',
 
                                     'mozBackgroundRequest',
                                     'mozArrayBuffer',
@@ -2278,7 +2278,10 @@
                             return dest;
                         }
 
-                        var runFail = function( xmlHttpRequest ) {
+                        var runFail = function( ev ) {
+                            var self = this;
+                            var xmlHttpRequest = this.__.inner;
+
                             var body = document.body;
                             var iframe = [
                                     "<iframe ",
@@ -2360,14 +2363,44 @@
                                         }
                                     }
 
+                                    /*
+                                     * Retry Handler.
+                                     * 
+                                     * Clear this, make a new (real) XMLHttpRequest,
+                                     * and then re-run everything.
+                                     */
                                     iDoc.getElementById('ajax-retry').onclick = function() {
-                                        // todo: re-run the ajax request
+                                        var methodCalls = self.__.methodCalls;
+
+                                        initializeXMLHttpRequest.call( self );
+                                        for ( var i = 0; i < methodCalls.length; i++ ) {
+                                            var method = methodCalls[i];
+                                            self[method.method].apply( self, method.args );
+                                        }
+
                                         closeIFrame();
+
                                         return false;
                                     };
 
-                                    // setup the close handler
+                                    /*
+                                     * The close handler.
+                                     * 
+                                     * When closed, the response is cleared,
+                                     * and then the request finishes with null info.
+                                     */
                                     iDoc.getElementById('ajax-close').onclick = function() {
+                                        copyRequestProperties( self.__.inner, self, true );
+
+                                        // clear the response
+                                        self.response       = '';
+                                        self.responseText   = '';
+                                        self.responseXML    = null;
+
+                                        if ( self.onreadystatechange ) {
+                                            self.onreadystatechange( ev );
+                                        }
+
                                         closeIFrame();
                                         return false;
                                     };
@@ -2391,6 +2424,10 @@
                          * occur instead of running the result.
                          */
                         var XMLHttpRequest = function() {
+                            initializeXMLHttpRequest.call( this );
+                        }
+
+                        var initializeXMLHttpRequest = function() {
                             var self = this,
                                 inner = new old();
 
@@ -2475,7 +2512,7 @@
                                         errorOnce
                                 ) {
                                     errorOnce = false;
-                                    runFail( inner );
+                                    runFail.call( self, ev );
                                 }
                             };
 
@@ -2489,9 +2526,10 @@
                              *  this.__.fieldName
                              */
                             this.__ = {
-                                inner: inner,
-                                isAjaxError: false,
-                                isSynchronous: false
+                                    methodCalls: [],
+                                    inner: inner,
+                                    isAjaxError: false,
+                                    isSynchronous: false
                             };
                         }
 
@@ -2511,19 +2549,25 @@
                         var isSynchronous = function( args ) {
                             this.__.isSynchronous = ( args[2] === false );
                         }
+                        var saveRequest = function( args, method ) {
+                            this.__.methodCalls.push({
+                                method: method,
+                                args: args
+                            });
+                        }
 
-                        wrapMethod( XMLHttpRequest, old, 'open'        , copyIn, isSynchronous );
-                        wrapMethod( XMLHttpRequest, old, 'abort'       , copyIn );
-                        wrapMethod( XMLHttpRequest, old, 'send'        , copyIn, addHeader );
-                        wrapMethod( XMLHttpRequest, old, 'sendAsBinary', copyIn, addHeader );
+                        wrapMethod( XMLHttpRequest, old, 'open'        , saveRequest, copyIn, isSynchronous );
+                        wrapMethod( XMLHttpRequest, old, 'abort'       , saveRequest, copyIn );
+                        wrapMethod( XMLHttpRequest, old, 'send'        , saveRequest, copyIn, addHeader );
+                        wrapMethod( XMLHttpRequest, old, 'sendAsBinary', saveRequest, copyIn, addHeader );
 
                         postMethod( XMLHttpRequest,      'send'        , copyOut );
                         postMethod( XMLHttpRequest,      'sendAsBinary', copyOut );
 
-                        wrapMethod( XMLHttpRequest, old, 'getAllResponseHeaders' );
-                        wrapMethod( XMLHttpRequest, old, 'getResponseHeader'     );
-                        wrapMethod( XMLHttpRequest, old, 'setRequestHeader'      );
-                        wrapMethod( XMLHttpRequest, old, 'overrideMimeType'      );
+                        wrapMethod( XMLHttpRequest, old, 'getAllResponseHeaders', saveRequest );
+                        wrapMethod( XMLHttpRequest, old, 'getResponseHeader'    , saveRequest );
+                        wrapMethod( XMLHttpRequest, old, 'setRequestHeader'     , saveRequest );
+                        wrapMethod( XMLHttpRequest, old, 'overrideMimeType'     , saveRequest );
 
                         window.XMLHttpRequest = XMLHttpRequest;
                     }
@@ -2564,7 +2608,8 @@
                         <? } ?>
                         <h2 id="error-file-root"><?= $serverName ?> | <?= $applicationRoot ?></h2>
                         <h2 id="ajax-info">
-                            <span id="ajax-tab" class="ajax-button">AJAX</span>
+                            <span id="ajax-tab" class="ajax-button">AJAX PAUSED</span>
+
                             <span class="ajax-url"><?= $serverName ?><?= $requestUrl ?></span>
                             <span class="ajax-buttons">
                                 <a href="#" id="ajax-close" class="ajax-button">X</a>
@@ -2817,9 +2862,13 @@
                     color: #fff;
                 }
                 #ajax-tab {
-                    background: #359;
                     float: left;
                     margin-right: 12px;
+
+                    background: #000;
+                    color: inherit;
+                    border: 3px solid #333;
+                    margin-top: -6px;
                 }
                 .ajax-buttons {
                     position: absolute;
@@ -2830,8 +2879,6 @@
                         float: right;
                         background: #0E4973;
                         margin-right: 12px;
-/* not implemented, so just hide the button */
-display: none;
                     }
                         #ajax-retry:hover {
                             background: #0C70B7;
