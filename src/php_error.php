@@ -1310,7 +1310,9 @@
                 if ( $lines ) {
                     $numLines = $this->numLines;
 
-                    $searchDist = (int)( $numLines/2 );
+                    $searchUp   = ceil( $numLines*0.75 );
+                    $searchDown = $numLines - $searchUp;
+                    
                     $countLines = count( $lines );
 
                     /*
@@ -1324,7 +1326,7 @@
                      * we go down as far as we can,
                      * then work up the search area.
                      */
-                    if ( $errLine+$searchDist > $countLines ) {
+                    if ( $errLine+$searchDown > $countLines ) {
                         $minLine = max( 0, $countLines-$numLines );
                         $maxLine = $countLines;
                     /*
@@ -1332,7 +1334,7 @@
                      * Then stretch down the whole search area.
                      */
                     } else {
-                        $minLine = max( 0, $errLine-$searchDist );
+                        $minLine = max( 0, $errLine-$searchUp );
                         $maxLine = min( $minLine+$numLines, count($lines) );
                     }
 
@@ -2568,9 +2570,7 @@
                             <span class="ajax-url"><?= $serverName ?><?= $requestUrl ?></span>
                             <span class="ajax-buttons">
                                 <a href="#" id="ajax-close" class="ajax-button">X</a>
-<? /*
                                 <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
-*/?>
                             </span>
                         </h2>
                         <h1 id="error-title"><?= $message ?></h1>
@@ -2832,6 +2832,8 @@
                         float: right;
                         background: #0E4973;
                         margin-right: 12px;
+/* not implemented, so just hide the button */
+display: none;
                     }
                         #ajax-retry:hover {
                             background: #0C70B7;
