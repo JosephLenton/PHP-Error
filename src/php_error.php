@@ -2792,12 +2792,18 @@
                     color: #aff;
                 }
 
+                h1,
+                h2,
+                .background {
+                    font: 100% monaco, consolas, monospace;
+                }
+
                 h1 {
-                    font: 32px consolas;
+                    font-size: 32px;
                     margin-bottom: 0;
                 }
                 h2 {
-                    font: 24px consolas;
+                    font-size: 24px;
                     margin-top: 0;
                 }
                         .background {
@@ -2907,7 +2913,7 @@
                     height: 100%;
                 }
                 #error-back {
-                    font: 240px consolas;
+                    font-size: 240px;
                     color: #211600;
                     position: absolute;
                     top: 60px;
@@ -2967,7 +2973,7 @@
                         z-index: 1;
                     }
                         .error-file-line {
-                            font: 16px consolas;
+                            font-size: 16px;
                             color: #ddd;
                             white-space: pre;
                             list-style-type: none;
@@ -2984,7 +2990,7 @@
                  */
                 ?>
                 #error-stack-trace {
-                    font: 18px consolas;
+                    font-size: 18px;
                     line-height: 28px;
                     white-space: pre;
 
