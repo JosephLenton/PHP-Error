@@ -201,6 +201,8 @@
         const PHP_ERROR_MAGIC_HEADER_VALUE = 'php_stack_error';
         const MAGIC_IS_PRETTY_ERRORS_MARKER = '<!-- __magic_php_error_is_a_stack_trace_constant__ -->';
 
+        const PHP_ERROR_INI_PREFIX = 'php_error';
+
         /**
          * At the time of writing, scalar type hints are unsupported.
          * By scalar, I mean 'string' and 'integer'.
@@ -464,7 +466,7 @@
             $syntaxMap = BetterErrorsReporter::$syntaxMap;
 
             // @supress invalid code raises a warning
-            $tokens = @token_get_all( "<?php " . $code . " ?>" );
+            $tokens = @token_get_all( "<?php " . $code . " ?" . ">" );
             $html = array();
             $len = count($tokens)-1;
             $inString = false;
@@ -784,9 +786,16 @@
             if ( $options && isset($options[$key]) ) {
                 $val = $options[$key];
                 unset( $options[$key] );
+
                 return $val;
             } else {
-                return $alt;
+                $iniAlt = @get_cfg_var( BetterErrorsReporter::PHP_ERROR_INI_PREFIX . '.' . $key );
+
+                if ( $iniAlt !== false ) {
+                    return $iniAlt;
+                } else {
+                    return $alt;
+                }
             }
         }
 
@@ -890,6 +899,12 @@
          * 
          * Note that if 'php_error.force_disable' is true, then this object
          * will try to look like it works, but won't actually do anything.
+         * 
+         * All options can also be passed in from 'php.ini'. You do this
+         * by setting it with 'php_error.' prefix. For example:
+         * 
+         *      php_error.catch_ajax_errors = On
+         *      php_error.error_reporting_on = E_ALL | E_STRICT
          * 
          * Includes:
          *  = Types of errors this will catch =
