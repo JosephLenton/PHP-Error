@@ -68,7 +68,7 @@
      * can pass in options, to customize the setup, and you get back a
      * handler you can alter at runtime.
      * 
-     *      $handler = new \php_error\BetterErrorsReporter( $myOptions );
+     *      $handler = new \php_error\ErrorHandler( $myOptions );
      *      $handler->turnOn();
      * 
      * There should only ever be one handler! This is an (underdstandable)
@@ -92,7 +92,7 @@
 
     use \php_error\ErrorToExceptionException,
         \php_error\FileLinesSet,
-        \php_error\BetterErrorsReporter,
+        \php_error\ErrorHandler,
 
         \php_error\JSMin,
         \php_error\JSMinException;
@@ -148,7 +148,7 @@
      * will throw an exception.
      * 
      * @param options Optional, options declaring how PHP Error should be setup and used.
-     * @return The BetterErrorsReporter used for reporting errors.
+     * @return The ErrorHandler used for reporting errors.
      */
     function reportErrors( $options=null ) {
         global $_php_error_global_handler;
@@ -156,7 +156,7 @@
         if ( $options === null && $_php_error_global_handler !== null ) {
             $handler = $_php_error_global_handler;
         } else {
-            $handler = new BetterErrorsReporter( $options );
+            $handler = new ErrorHandler( $options );
         }
         
         $handler->turnOn();
@@ -165,7 +165,7 @@
     /**
      * The actual handler. There can only ever be one.
      */
-    class BetterErrorsReporter
+    class ErrorHandler
     {
         const REGEX_DOCTYPE = '/<( )*!( *)DOCTYPE([^>]+)>/';
 
@@ -447,8 +447,8 @@
          * If it's not found, then the symbol given is returned.
          */
         private static function phpSymbolToDescription( $symbol ) {
-            if ( isset(BetterErrorsReporter::$PHP_SYMBOL_MAPPINGS[$symbol]) ) {
-                return BetterErrorsReporter::$PHP_SYMBOL_MAPPINGS[$symbol];
+            if ( isset(ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol]) ) {
+                return ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol];
             } else {
                 return "'$symbol'";
             }
@@ -463,7 +463,7 @@
          * @return HTML version of the code given, syntax highlighted.
          */
         private static function syntaxHighlight( $code ) {
-            $syntaxMap = BetterErrorsReporter::$syntaxMap;
+            $syntaxMap = ErrorHandler::$syntaxMap;
 
             // @supress invalid code raises a warning
             $tokens = @token_get_all( "<?php " . $code . " ?" . ">" );
@@ -510,7 +510,7 @@
                     $inString = !$inString;
                 } else if ( $type === T_STRING ) {
                     $matches = array();
-                    preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $code, $matches);
+                    preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $code, $matches);
 
                     if ( $matches && strlen($matches[0]) === strlen($code) ) {
                         $type = 'const';
@@ -565,7 +565,7 @@
          * 
          * Usage:
          * 
-         *      list( $class, $function ) = BetterErrorsReporter::splitFunction( $name );
+         *      list( $class, $function ) = ErrorHandler::splitFunction( $name );
          * 
          * @param name The function name to split.
          * @return An array containing class and function name.
@@ -617,7 +617,7 @@
                     $paramType = null;
                 }
 
-                return BetterErrorsReporter::newArgument(
+                return ErrorHandler::newArgument(
                         $name->name,
                         $paramType,
                         $name->isPassedByReference(),
@@ -643,7 +643,7 @@
         }
 
         private static function syntaxHighlightFunctionMatch( $match, &$stackTrace, $highlightArg=null, &$numHighlighted=0 ) {
-            list( $className, $type, $functionName ) = BetterErrorsReporter::splitFunction( $match );
+            list( $className, $type, $functionName ) = ErrorHandler::splitFunction( $match );
 
             // is class::method()
             if ( $className !== null ) {
@@ -662,7 +662,7 @@
                     $args = array();
                     $min = 0;
                     foreach( $params as $i => $param ) {
-                        $arg = BetterErrorsReporter::newArgument( $param );
+                        $arg = ErrorHandler::newArgument( $param );
 
                         if ( ! $arg['has_default'] ) {
                             $min = $i;
@@ -687,7 +687,7 @@
                         $type = null;
                     }
 
-                    return BetterErrorsReporter::syntaxHighlightFunction( $className, $type, $functionName, $args );
+                    return ErrorHandler::syntaxHighlightFunction( $className, $type, $functionName, $args );
                 }
             }
 
@@ -789,7 +789,7 @@
 
                 return $val;
             } else {
-                $iniAlt = @get_cfg_var( BetterErrorsReporter::PHP_ERROR_INI_PREFIX . '.' . $key );
+                $iniAlt = @get_cfg_var( ErrorHandler::PHP_ERROR_INI_PREFIX . '.' . $key );
 
                 if ( $iniAlt !== false ) {
                     return $iniAlt;
@@ -800,11 +800,11 @@
         }
 
         private static function folderTypeToCSS( $type ) {
-            if ( $type === BetterErrorsReporter::FILE_TYPE_ROOT ) {
+            if ( $type === ErrorHandler::FILE_TYPE_ROOT ) {
                 return 'file-root';
-            } else if ( $type === BetterErrorsReporter::FILE_TYPE_IGNORE ) {
+            } else if ( $type === ErrorHandler::FILE_TYPE_IGNORE ) {
                 return 'file-ignore';
-            } else if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
+            } else if ( $type === ErrorHandler::FILE_TYPE_APPLICATION ) {
                 return 'file-app';
             } else {
                 return 'file-common';
@@ -963,8 +963,8 @@
              * They are removed one by one, and any left, will raise an error.
              */
 
-            $ignoreFolders                  = BetterErrorsReporter::optionsPop( $options, 'ignore_folders'     , null );
-            $appFolders                     = BetterErrorsReporter::optionsPop( $options, 'application_folders', null );
+            $ignoreFolders                  = ErrorHandler::optionsPop( $options, 'ignore_folders'     , null );
+            $appFolders                     = ErrorHandler::optionsPop( $options, 'application_folders', null );
 
             if ( $ignoreFolders !== null ) {
                 $this->setFolders( $this->ignoreFolders, $this->ignoreFoldersLongest, $ignoreFolders );
@@ -973,11 +973,11 @@
                 $this->setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
             }
 
-            $this->defaultErrorReportingOn  = BetterErrorsReporter::optionsPop( $options, 'error_reporting_on' , -1 );
-            $this->defaultErrorReportingOff = BetterErrorsReporter::optionsPop( $options, 'error_reporting_off', error_reporting() );
+            $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on' , -1 );
+            $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off', error_reporting() );
 
-            $this->applicationRoot          = BetterErrorsReporter::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
-            $this->serverName               = BetterErrorsReporter::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
+            $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
+            $this->serverName               = ErrorHandler::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
 
             /*
              * Relative paths might be given for document root,
@@ -991,12 +991,12 @@
                 $this->applicationRoot =  str_replace( '\\', '/', $dir );
             }
 
-            $this->catchClassNotFound       = BetterErrorsReporter::optionsPop( $options, 'catch_class_not_found' , true  );
-            $this->catchSurpressedErrors    = BetterErrorsReporter::optionsPop( $options, 'catch_supressed_errors', false );
-            $this->catchAjaxErrors          = BetterErrorsReporter::optionsPop( $options, 'catch_ajax_errors'     , true  );
+            $this->catchClassNotFound       = ErrorHandler::optionsPop( $options, 'catch_class_not_found' , true  );
+            $this->catchSurpressedErrors    = ErrorHandler::optionsPop( $options, 'catch_supressed_errors', false );
+            $this->catchAjaxErrors          = ErrorHandler::optionsPop( $options, 'catch_ajax_errors'     , true  );
 
-            $this->backgroundText           = BetterErrorsReporter::optionsPop( $options, 'background_text'       , ''    );
-            $this->numLines                 = BetterErrorsReporter::optionsPop( $options, 'snippet_num_lines'     , BetterErrorsReporter::NUM_FILE_LINES        );
+            $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
+            $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
 
             if ( $options ) {
                 foreach ( $options as $key => $val ) {
@@ -1207,11 +1207,11 @@
 
                     // attemp to inject the script into the HTML, after the doctype
                     $matches = array();
-                    preg_match( BetterErrorsReporter::REGEX_DOCTYPE, $content, $matches );
+                    preg_match( ErrorHandler::REGEX_DOCTYPE, $content, $matches );
 
                     if ( $matches ) {
                         $doctype = $matches[0];
-                        $content = preg_replace( BetterErrorsReporter::REGEX_DOCTYPE, "$doctype $js", $content );
+                        $content = preg_replace( ErrorHandler::REGEX_DOCTYPE, "$doctype $js", $content );
                     } else {
                         echo $js;
                     }
@@ -1238,7 +1238,7 @@
         }
 
         private function isApplicationFolder( $file ) {
-            return BetterErrorsReporter::isFolderType(
+            return ErrorHandler::isFolderType(
                     $this->applicationFolders,
                     $this->applicationFoldersLongest,
                     $file
@@ -1246,7 +1246,7 @@
         }
 
         private function isIgnoreFolder( $file ) {
-            return BetterErrorsReporter::isFolderType(
+            return ErrorHandler::isFolderType(
                     $this->ignoreFolders,
                     $this->ignoreFoldersLongest,
                     $file
@@ -1258,13 +1258,13 @@
 
             // it's this file : (
             if ( $file === __FILE__ ) {
-                $type = BetterErrorsReporter::FILE_TYPE_IGNORE;
+                $type = ErrorHandler::FILE_TYPE_IGNORE;
             } else if ( strpos($testFile, '/') === false ) {
-                $type = BetterErrorsReporter::FILE_TYPE_ROOT;
+                $type = ErrorHandler::FILE_TYPE_ROOT;
             } else if ( $this->isApplicationFolder($testFile) ) {
-                $type = BetterErrorsReporter::FILE_TYPE_APPLICATION;
+                $type = ErrorHandler::FILE_TYPE_APPLICATION;
             } else if ( $this->isIgnoreFolder($testFile) ) {
-                $type = BetterErrorsReporter::FILE_TYPE_IGNORE;
+                $type = ErrorHandler::FILE_TYPE_IGNORE;
             } else {
                 $type = false;
             }
@@ -1356,7 +1356,7 @@
                     $fileLines = array_splice( $lines, $minLine, $maxLine-$minLine );
 
                     $fileLines = join( "\n", $fileLines );
-                    $fileLines = BetterErrorsReporter::syntaxHighlight( $fileLines );
+                    $fileLines = ErrorHandler::syntaxHighlight( $fileLines );
                     $fileLines = explode( "\n", $fileLines );
 
                     $lines = array();
@@ -1450,19 +1450,19 @@
                      * undefined function or method call
                      */
                     if ( $matches ) {
-                        list( $className, $type, $functionName ) = BetterErrorsReporter::splitFunction( $matches[0] );
+                        list( $className, $type, $functionName ) = ErrorHandler::splitFunction( $matches[0] );
 
                         if ( $stackTrace && isset($stackTrace[1]) && $stackTrace[1]['args'] ) {
                             $numArgs = count( $stackTrace[1]['args'] );
 
                             for ( $i = 0; $i < $numArgs; $i++ ) {
-                                $args[]= BetterErrorsReporter::newArgument( "_" );
+                                $args[]= ErrorHandler::newArgument( "_" );
                             }
                         }
 
                         $message = preg_replace(
                                 '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((->|::)[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?\\(\\)$/',
-                                BetterErrorsReporter::syntaxHighlightFunction( $className, $type, $functionName, $args ),
+                                ErrorHandler::syntaxHighlightFunction( $className, $type, $functionName, $args ),
                                 $message
                         );
                     }
@@ -1495,7 +1495,7 @@
                     $message = preg_replace( '/, called in .*$/', '', $message );
 
                     $matches = array();
-                    preg_match( BetterErrorsReporter::REGEX_METHOD_OR_FUNCTION_END, $message, $matches );
+                    preg_match( ErrorHandler::REGEX_METHOD_OR_FUNCTION_END, $message, $matches );
 
                     if ( $matches ) {
                         $argumentMathces = array();
@@ -1504,14 +1504,14 @@
                                 (((int) $argumentMathces[1])-1) :
                                 null ;
 
-                        $altInfo = BetterErrorsReporter::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg, $numHighlighted );
+                        $altInfo = ErrorHandler::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg, $numHighlighted );
 
                         if ( $numHighlighted > 0 ) {
                             $message = preg_replace( '/^Missing argument ([0-9]+)/', 'Missing arguments ', $message );
                         }
 
                         if ( $altInfo ) {
-                            $message = preg_replace( BetterErrorsReporter::REGEX_METHOD_OR_FUNCTION_END, $altInfo, $message );
+                            $message = preg_replace( ErrorHandler::REGEX_METHOD_OR_FUNCTION_END, $altInfo, $message );
 
                             list( $srcErrFile, $srcErrLine, $stackSearchI ) = $skipStackFirst( $stackTrace );
                         }
@@ -1568,7 +1568,7 @@
 
                     if ( $num > 0 ) {
                         $match = $matches[0];
-                        $newSymbol = BetterErrorsReporter::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
+                        $newSymbol = ErrorHandler::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
 
                         $message = str_replace( $match, "unexpected $newSymbol", $message );
                     }
@@ -1581,7 +1581,7 @@
                         $newMatch = str_replace( ", expecting ", '', $match );
                         $symbols = explode( ' or ', $newMatch );
                         foreach ( $symbols as $i => $sym ) {
-                            $symbols[$i] = BetterErrorsReporter::phpSymbolToDescription( $sym );
+                            $symbols[$i] = ErrorHandler::phpSymbolToDescription( $sym );
                         }
                         $newMatch = join( ', or ', $symbols );
 
@@ -1596,7 +1596,7 @@
                     strpos($message, "Undefined variable:") !== false
                 ) {
                     $matches = array();
-                    preg_match( BetterErrorsReporter::REGEX_VARIABLE, $message, $matches );
+                    preg_match( ErrorHandler::REGEX_VARIABLE, $message, $matches );
 
                     if ( count($matches) > 0 ) {
                         $message = 'Undefined variable <span class="syntax-variable">$' . $matches[0] . '</span>' ;
@@ -1610,7 +1610,7 @@
                     $message = preg_replace( '/, called in .*$/', '', $message );
 
                     $matches = array();
-                    preg_match( BetterErrorsReporter::REGEX_METHOD_OR_FUNCTION, $message, $matches );
+                    preg_match( ErrorHandler::REGEX_METHOD_OR_FUNCTION, $message, $matches );
 
                     if ( $matches ) {
                         $argumentMathces = array();
@@ -1619,19 +1619,19 @@
                                 (((int) $argumentMathces[1])-1) :
                                 null ;
 
-                        $fun = BetterErrorsReporter::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg );
+                        $fun = ErrorHandler::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg );
 
                         if ( $fun ) {
                             $message = str_replace( 'passed to ', 'calling ', $message );
-                            $message = preg_replace( BetterErrorsReporter::REGEX_METHOD_OR_FUNCTION, $fun, $message );
+                            $message = preg_replace( ErrorHandler::REGEX_METHOD_OR_FUNCTION, $fun, $message );
                             $prioritizeCaller = true;
 
                             /*
                              * scalars not supported.
                              */
                             $scalarType = null;
-                            if ( ! BetterErrorsReporter::$IS_SCALAR_TYPE_HINTING_SUPPORTED ) {
-                                foreach ( BetterErrorsReporter::$SCALAR_TYPES as $scalar ) {
+                            if ( ! ErrorHandler::$IS_SCALAR_TYPE_HINTING_SUPPORTED ) {
+                                foreach ( ErrorHandler::$SCALAR_TYPES as $scalar ) {
                                     if ( stripos($message, "must be an instance of $scalar,") !== false ) {
                                         $scalarType = $scalar;
                                         break;
@@ -1642,14 +1642,14 @@
                             if ( $scalarType !== null ) {
                                 $message = preg_replace( '/^Argument [0-9]+ /', 'Incorrect type hint ', $message );
                                 $message = preg_replace(
-                                        '/ must be an instance of ' . BetterErrorsReporter::REGEX_PHP_IDENTIFIER . '\b.*$/',
+                                        '/ must be an instance of ' . ErrorHandler::REGEX_PHP_IDENTIFIER . '\b.*$/',
                                         ", ${scalarType} not supported",
                                         $message
                                 );
 
                                 $prioritizeCaller = false;
                             } else {
-                                $message = preg_replace( '/ must be an (instance of )?' . BetterErrorsReporter::REGEX_PHP_IDENTIFIER . '\b/', '', $message );
+                                $message = preg_replace( '/ must be an (instance of )?' . ErrorHandler::REGEX_PHP_IDENTIFIER . '\b/', '', $message );
 
                                 if ( preg_match('/, none given$/', $message) ) {
                                     $message = preg_replace( '/^Argument /', 'Missing argument ', $message );
@@ -1709,8 +1709,8 @@
                         if ( isset($trace['file']) && isset($trace['line']) ) {
                             list( $type, $_ ) = $this->getFolderType( $root, $trace['file'] );
 
-                            if ( $type !== BetterErrorsReporter::FILE_TYPE_IGNORE ) {
-                                if ( $type === BetterErrorsReporter::FILE_TYPE_APPLICATION ) {
+                            if ( $type !== ErrorHandler::FILE_TYPE_IGNORE ) {
+                                if ( $type === ErrorHandler::FILE_TYPE_APPLICATION ) {
                                     $srcErrLine = $trace['line'];
                                     $srcErrFile = $trace['file'];
 
@@ -1774,7 +1774,7 @@
                     } else {
                         $argKlass = get_class( $arg );
 
-                        if ( preg_match(BetterErrorsReporter::REGEX_PHP_CONST_IDENTIFIER, $argKlass) ) {
+                        if ( preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $argKlass) ) {
                             return '<span class="syntax-literal">$' . $argKlass . '</span>';
                         } else {
                             return '<span class="syntax-variable">$' . $argKlass . '</span>';
@@ -1799,12 +1799,12 @@
                             if ( $altInfo !== null ) {
                                 $info = $altInfo;
                             } else if ( isset($trace['info']) && $trace['info'] !== '' ) {
-                                $info = BetterErrorsReporter::syntaxHighlight( $trace['info'] );
+                                $info = ErrorHandler::syntaxHighlight( $trace['info'] );
                             } else { 
                                 $contents = $this->getFileContents( $trace['file'] );
 
                                 if ( $contents ) {
-                                    $info = BetterErrorsReporter::syntaxHighlight(
+                                    $info = ErrorHandler::syntaxHighlight(
                                             trim( $contents[$trace['line']-1] )
                                     );
                                 }
@@ -1817,7 +1817,7 @@
                                 }
                             }
 
-                            $info = BetterErrorsReporter::syntaxHighlightFunction(
+                            $info = ErrorHandler::syntaxHighlightFunction(
                                     isset($trace['class'])      ? $trace['class']       : null,
                                     isset($trace['type'])       ? $trace['type']        : null,
                                     isset($trace['function'])   ? $trace['function']    : null,
@@ -1831,7 +1831,7 @@
                             $klass = '';
 
                             list( $type, $file ) = $this->getFolderType( $root, $trace['file'] );
-                            $klass = BetterErrorsReporter::folderTypeToCSS( $type );
+                            $klass = ErrorHandler::folderTypeToCSS( $type );
 
                             $trace['html_file'] = "<span class='filename $klass'>$file</span>";
                             $trace['is_native'] = false;
@@ -1969,7 +1969,7 @@
                 list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
                 list( $type, $errFile ) = $this->getFolderType( $root, $errFile );
-                $errFileType = BetterErrorsReporter::folderTypeToCSS( $type );
+                $errFileType = ErrorHandler::folderTypeToCSS( $type );
 
                 $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
                 $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
@@ -2466,7 +2466,7 @@
                                  * Check headers for error.
                                  */
                                 if ( ! isAjaxError && state >= 2 ) {
-                                    var header = inner.getResponseHeader( '<?= BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_KEY ?>' );
+                                    var header = inner.getResponseHeader( '<?= ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY ?>' );
 
                                     if ( header !== null ) {
                                         self.__.isAjaxError = true;
@@ -2759,11 +2759,9 @@
             // clean out anything displayed already
             try {
                 ob_clean();
-//                ob_end_clean();
-//                ob_start("ob_gzhandler");
             } catch ( Exception $ex ) { /* do nothing */ }
 
-            header( BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . BetterErrorsReporter::PHP_ERROR_MAGIC_HEADER_VALUE );
+            header( ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE );
 
             echo '<!DOCTYPE html>';
 
