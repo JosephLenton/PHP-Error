@@ -29,15 +29,6 @@ Features
 
 There is an online demo [here](http://phperror.net)
 
-Documentation
--------------
-
-### [API](https://github.com/JosephLenton/PHP-Error/wiki/API)
-
-### [Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)
-
-### [php.ini](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)
-
 Example Usage
 -------------
 
@@ -54,6 +45,15 @@ Example Usage
         \php_error\reportErrors();
     ?>
 ```
+
+Documentation
+-------------
+
+### [API](https://github.com/JosephLenton/PHP-Error/wiki/API)
+
+### [Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)
+
+### [php.ini](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)
 
 Do not use on a live site!
 --------------------------
