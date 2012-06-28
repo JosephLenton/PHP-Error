@@ -1096,11 +1096,15 @@
                     throw new Exception( "non callable callback given" );
                 }
 
-                $this->turnOff();
-                $result = $callback();
-                $this->turnOn();
+                if ( $this->isOn() ) {
+                    $this->turnOff();
+                    $result = $callback();
+                    $this->turnOn();
 
-                return $result;
+                    return $result;
+                } else {
+                    return $callback();
+                }
             }
             
             /**
