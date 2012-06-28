@@ -820,17 +820,21 @@
 
                 $len = min( count($parts), $longest );
 
-                for ( $i = 0; $i < $len; $i++ ) {
-                    if ( isset($folders[$i+1]) ) {
-                        $folderParts = &$folders[ $i+1 ];
+                for ( $i = $len; $i > 0; $i-- ) {
+                    if ( isset($folders[$i]) ) {
+                        $folderParts = &$folders[ $i ];
 
                         $success = false;
                         for ( $j = 0; $j < count($folderParts); $j++ ) {
-                            if ( $folderParts[$j] === $parts[$j] ) {
-                                $success = true;
-                            } else {
-                                $success = false;
-                                break;
+                            $folderNames = $folderParts[$j];
+
+                            for ( $k = 0; $k < count($folderNames); $k++ ) {
+                                if ( $folderNames[$k] === $parts[$k] ) {
+                                    $success = true;
+                                } else {
+                                    $success = false;
+                                    break;
+                                }
                             }
                         }
 
@@ -873,9 +877,9 @@
                 
                 if ( isset($newFolders[$count]) ) {
                     $folds = &$newFolders[$count];
-                    $folds[]= $folder;
+                    $folds[]= $parts;
                 } else {
-                    $newFolders[$count] = array( $folder );
+                    $newFolders[$count] = array( $parts );
                 }
             }
 
