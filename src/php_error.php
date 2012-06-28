@@ -929,8 +929,8 @@
              *                              A relative path can be given, but lets be honest, an explicit path is the way to guarantee that you
              *                              will get the path you want. My relative might not be the same as your relative.
              * 
-             *  - snippet_num_lines         The number of lines to display in the code snippet, this defaults to 8. That includes the line being
-             *                              reported.
+             *  - snippet_num_lines         The number of lines to display in the code snippet. 
+             *                              That includes the line being reported.
              * 
              *  - server_name               The name for this server, defaults to "$_SERVER['SERVER_NAME']"
              * 
