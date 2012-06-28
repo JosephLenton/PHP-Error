@@ -32,11 +32,11 @@ There is an online demo [here](http://phperror.net)
 Documentation
 -------------
 
-<center><big>[API](https://github.com/JosephLenton/PHP-Error/wiki/API)</big></center><br>
+## [API](https://github.com/JosephLenton/PHP-Error/wiki/API)
 
-<center><big>[Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)</big></center><br>
+## [Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)
 
-<center><big>[php.ini](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)</big></center><br>
+## [php.ini](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)
 
 Example Usage
 -------------
