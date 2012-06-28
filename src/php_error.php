@@ -2346,37 +2346,116 @@
                                 var self = this;
                                 var xmlHttpRequest = this.__.inner;
 
-                                var body = document.body;
-                                var iframe = [
-                                        "<iframe ",
-                                        " width='100%'",
-                                        " height='100%'",
-                                        " style='",
-                                                '-webkit-transition: opacity 200ms linear;',
-                                                '-moz-transition: opacity 200ms linear;',
-                                                '-ms-transition: opacity 200ms linear;',
-                                                '-o-transition: opacity 200ms linear;',
-                                                'transition: opacity 200ms linear;',
-                                                'opacity: 0;',
+                                var iframe = document.createElement('iframe');
+                                iframe.setAttribute('width', '100%');
+                                iframe.setAttribute('height', '100%');
+                                iframe.setAttribute('src', 'about:blank');
 
-                                                'background:transparent;',
-                                                'position:fixed;',
-                                                'top:0;',
-                                                'left:0;',
-                                                'right:0;',
-                                                'bottom:0;',
-                                                'z-index: 100000',
-                                        "'",
-                                        ">",
-                                        '</iframe>'
-                                ].join('');
+                                iframe.style.transition =
+                                iframe.style.OTransition =
+                                iframe.style.MsTransition =
+                                iframe.style.MozTransition =
+                                iframe.style.WebkitTransition = 'opacity 200ms linear';
 
-                                var div = document.createElement('div');
-                                div.innerHTML = iframe;
-                                iframe = div.firstChild;
-                                div.removeChild( iframe );
+                                iframe.style.background = 'transparent';
+                                iframe.style.opacity = 0;
+                                iframe.style.zIndex = 100000;
+                                iframe.style.top = 0;
+                                iframe.style.right = 0;
+                                iframe.style.left = 0;
+                                iframe.style.bottom = 0;
+                                iframe.style.position = 'fixed';
 
                                 var response = xmlHttpRequest.responseText;
+
+                                iframe.onload = function() {
+                                    var iDoc = iframe.contentWindow || iframe.contentDocument;
+                                    if ( iDoc.document) {
+                                        iDoc = iDoc.document;
+                                    }
+
+                                    var iBody = iDoc.getElementsByTagName("body")[0];
+                                    iBody.innerHTML = response; 
+                                    var iHead = iDoc.getElementsByTagName("head")[0];
+
+                                    // re-run the script tags
+                                    var scripts = iDoc.getElementsByTagName('script');
+                                    for ( var i = 0; i < scripts.length; i++ ) {
+                                        var script = scripts[i];
+                                        var parent = script.parentNode;
+
+                                        if ( parent ) {
+                                            parent.removeChild( script );
+
+                                            var newScript = iDoc.createElement('script');
+                                            newScript.innerHTML = script.innerHTML;
+
+                                            iHead.appendChild( newScript );
+                                        }
+                                    }
+
+                                    var closed = false;
+                                    var closeIFrame = function() {
+                                        if ( ! closed ) {
+                                            closed = true;
+
+                                            iframe.style.opacity = 0;
+
+                                            setTimeout( function() {
+                                                iframe.parentNode.removeChild( iframe );
+                                            }, 220 );
+                                        }
+                                    }
+
+                                    /*
+                                     * Retry Handler.
+                                     * 
+                                     * Clear this, make a new (real) XMLHttpRequest,
+                                     * and then re-run everything.
+                                     */
+                                    iDoc.getElementById('ajax-retry').onclick = function() {
+                                        var methodCalls = self.__.methodCalls;
+
+                                        initializeXMLHttpRequest.call( self );
+                                        for ( var i = 0; i < methodCalls.length; i++ ) {
+                                            var method = methodCalls[i];
+                                            self[method.method].apply( self, method.args );
+                                        }
+
+                                        closeIFrame();
+
+                                        return false;
+                                    };
+
+                                    /*
+                                     * The close handler.
+                                     * 
+                                     * When closed, the response is cleared,
+                                     * and then the request finishes with null info.
+                                     */
+                                    iDoc.getElementById('ajax-close').onclick = function() {
+                                        copyRequestProperties( self.__.inner, self, true );
+
+                                        // clear the response
+                                        self.response       = '';
+                                        self.responseText   = '';
+                                        self.responseXML    = null;
+
+                                        if ( self.onreadystatechange ) {
+                                            self.onreadystatechange( ev );
+                                        }
+
+                                        closeIFrame();
+                                        return false;
+                                    };
+
+                                    var html = iDoc.getElementsByTagName('html')[0];
+                                    html.setAttribute( 'class', 'ajax' );
+
+                                    setTimeout( function() {
+                                        iframe.style.opacity = 1;
+                                    }, 1 );
+                                }
 
                                 /*
                                  * Placed inside a timeout, incase the document doesn't exist yet.
@@ -2386,96 +2465,6 @@
                                 setTimeout( function() {
                                     var body = document.getElementsByTagName('body')[0];
                                     body.appendChild( iframe );
-
-                                    setTimeout( function() {
-                                        var iDoc = iframe.contentWindow || iframe.contentDocument;
-                                        if ( iDoc.document) {
-                                            iDoc = iDoc.document;
-                                        }
-
-                                        var iBody = iDoc.getElementsByTagName("body")[0];
-                                        iBody.innerHTML = response;
-
-                                        var iHead = iDoc.getElementsByTagName("head")[0];
-
-                                        // re-run the script tags
-                                        var scripts = iDoc.getElementsByTagName('script');
-                                        for ( var i = 0; i < scripts.length; i++ ) {
-                                            var script = scripts[i];
-                                            var parent = script.parentNode;
-
-                                            if ( parent ) {
-                                                parent.removeChild( script );
-
-                                                var newScript = iDoc.createElement('script');
-                                                newScript.innerHTML = script.innerHTML;
-
-                                                iHead.appendChild( newScript );
-                                            }
-                                        }
-
-                                        var closed = false;
-                                        var closeIFrame = function() {
-                                            if ( ! closed ) {
-                                                closed = true;
-
-                                                iframe.style.opacity = 0;
-
-                                                setTimeout( function() {
-                                                    iframe.parentNode.removeChild( iframe );
-                                                }, 220 );
-                                            }
-                                        }
-
-                                        /*
-                                         * Retry Handler.
-                                         * 
-                                         * Clear this, make a new (real) XMLHttpRequest,
-                                         * and then re-run everything.
-                                         */
-                                        iDoc.getElementById('ajax-retry').onclick = function() {
-                                            var methodCalls = self.__.methodCalls;
-
-                                            initializeXMLHttpRequest.call( self );
-                                            for ( var i = 0; i < methodCalls.length; i++ ) {
-                                                var method = methodCalls[i];
-                                                self[method.method].apply( self, method.args );
-                                            }
-
-                                            closeIFrame();
-
-                                            return false;
-                                        };
-
-                                        /*
-                                         * The close handler.
-                                         * 
-                                         * When closed, the response is cleared,
-                                         * and then the request finishes with null info.
-                                         */
-                                        iDoc.getElementById('ajax-close').onclick = function() {
-                                            copyRequestProperties( self.__.inner, self, true );
-
-                                            // clear the response
-                                            self.response       = '';
-                                            self.responseText   = '';
-                                            self.responseXML    = null;
-
-                                            if ( self.onreadystatechange ) {
-                                                self.onreadystatechange( ev );
-                                            }
-
-                                            closeIFrame();
-                                            return false;
-                                        };
-
-                                        var html = iDoc.getElementsByTagName('html')[0];
-                                        html.setAttribute( 'class', 'ajax' );
-
-                                        setTimeout( function() {
-                                            iframe.style.opacity = 1;
-                                        }, 1 );
-                                    }, 1 );
                                 }, 1 );
                             }
 
