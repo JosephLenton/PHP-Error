@@ -53,7 +53,7 @@ Documentation
 
 ### [Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)
 
-### [php.ini](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)
+### [php.ini settings](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)
 
 Do not use on a live site!
 --------------------------
