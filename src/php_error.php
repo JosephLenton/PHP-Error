@@ -120,7 +120,15 @@
          */
         if ( ! isset($_php_error_global_handler) ) {
             $_php_error_global_handler = null;
-            $_php_error_is_ini_enabled = ! @get_cfg_var( 'php_error.force_disabled' );
+
+            $_php_error_is_ini_enabled = false;
+
+            // check both 'disable' and 'disabled' incase it's mispelt
+            $_php_error_is_ini_enabled = 
+                    ! @get_cfg_var( 'php_error.force_disabled' ) &&
+                    ! @get_cfg_var( 'php_error.force_disable'  ) &&
+                      @ini_get('display_errors') === '1'
+            ;
         }
 
         /**
@@ -2052,13 +2060,18 @@
                 return array( $fileLinesSets, $minSize );
             }
 
+            /*
+             * Even if disabled, we still act like reporting is on,
+             * if it's turned on.
+             * 
+             * We just don't do anything.
+             */
             private function setEnabled( $isOn ) {
+                $wasOn = $this->isOn;
+                $this->isOn = $isOn;
+
                 global $_php_error_is_ini_enabled;
-
                 if ( $_php_error_is_ini_enabled ) {
-                    $wasOn = $this->isOn;
-                    $this->isOn = $isOn;
-
                     /*
                      * Only turn off, if we're moving from on to off.
                      * 
@@ -3647,4 +3660,12 @@
 
         // -- Exceptions ---------------------------------------------------------------
         class JSMinException extends Exception {}
+
+        if (
+                $_php_error_is_ini_enabled &&
+                $_php_error_global_handler === null &&
+                @get_cfg_var('php_error.autorun')
+        ) {
+            reportErrors();
+        }
     }
