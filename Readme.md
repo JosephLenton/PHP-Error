@@ -40,10 +40,10 @@ Example Usage
  * profit! \o/
 
 ```php
-	<?php
-		require( 'php_error.php' );
-		\php_error\reportErrors();
-	?>
+    <?php
+        require( 'php_error.php' );
+        \php_error\reportErrors();
+    ?>
 ```
 
 Do not use on a live site!
@@ -66,6 +66,121 @@ Advanced Features
  * application files; these are prioritized when an error strikes!
  
 ![Application Aware Stack Trace](http://i.imgur.com/qdwnb.png)
+
+Options
+-------
+
+The options can be passed into 'reportErrors' when it is called.
+They are stored in an associative array of 'option' mapping to the value.
+
+The options include:
+
+<table>
+    <tr>
+        <th>Option</th>
+        <th>Default</th>
+        <th>Descriptionth>
+    </tr> 
+    <tr>
+        <td>catch_ajax_errors</td>
+        <td>true</td>
+        <td>
+            When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors.
+        </td>
+    <tr>
+    </tr>
+        <td>catch_supressed_errors</td>
+        <td>false</td>
+        <td>
+            The @ supresses errors. If set to true, then they are still reported anyway, but respected when false.
+        </td>
+    <tr>
+    </tr>
+        catch_class_not_found</td>
+        <td>true</td>
+        <td>
+            When true, loading a class that does not exist will be caught.
+            If there are any existing class loaders, they will be run first, giving you a chance to load the class.
+        </td>
+    <tr>
+    </tr>
+        <td>error_reporting_on</td>
+        <td>-1 (everything)</td>
+        <td>
+            The error reporting value for when errors are turned on by PHP Error.
+        </td>
+    <tr>
+    </tr>
+        <td>error_reporting_off</td>
+        <td>the value of 'error_reporting'</td>
+        <td>
+            The error reporting value for when PHP Error reporting is turned off. By default it just goes back to the standard level.
+        </td>
+    <tr>
+    </tr>
+        <td>application_root</td>
+        <td>$_SERVER['DOCUMENT_ROOT']</td>
+        <td>
+            When it's working out hte stack trace, this is the root folder of the application, to use as it's base.
+            A relative path can be given, but lets be honest, an explicit path is the way to guarantee that you
+            will get the path you want. My relative might not be the same as your relative.
+        </td>
+    <tr>
+    </tr>
+        <td>snippet_num_lines</td>
+        <td>13</td>
+        <td>
+            The number of lines to display in the code snippet. 
+            That includes the line being reported.
+        </td>
+    <tr>
+    </tr>
+        <td>server_name</td>
+        <td>$_SERVER['SERVER_NAME']</td>
+        <td>
+            The name for this server; it's domain address or ip being used to access it.
+            This is displayed in the output to tell you which project the error is being reported in.
+        </td>
+    <tr>
+    </tr>
+        <td>ignore_folders</td>
+        <td>null (no folders)</td>
+        <td>
+            This is allows you to highlight non-framework code in a stack trace.
+            An array of folders to ignore, when working out the stack trace.
+            This is folder prefixes in relation to the application_root, whatever that might be.
+            They are only ignored if there is a file found outside of them.
+            If you still don't get what this does, don't worry, it's here cos I use it.
+        </td>
+    <tr>
+    </tr>
+        <td>application_folders</td>
+        <td>null (no folders)</td>
+        <td>
+            Just like ignore, but anything found in these folders takes precedence
+            over anything else.
+        </td>
+    <tr>
+    </tr>
+        <td>background_text</td>
+        <td>an empty string</td>
+        <td>
+            The text that appeares in the background. By default this is blank.
+            Why? You can replace this with the name of your framework, for extra customization spice.
+        </td>
+    </tr>
+</table>
+
+### php.ini
+
+All of the options can be set in the php.ini. This allows you to globally change the defaults used in the code.
+This is done by appending 'php_error.' before the option, and then setting it's value.
+
+For example to turn off catching ajax errors:
+
+```
+    php_error.catch_ajax_errors = Off
+``` 
 
 php.ini options
 ---------------
