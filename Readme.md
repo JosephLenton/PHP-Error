@@ -103,6 +103,7 @@ then you can pass in the same options to it's constructor.
             // options set here
     );
     $handler = new \php_error\ErrorHandler( $options );
+    $handler->turnOn();
 ```
 
 ### All Options
