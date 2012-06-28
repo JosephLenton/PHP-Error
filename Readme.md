@@ -29,15 +29,13 @@ Features
 
 There is an online demo [here](http://phperror.net)
 
-Example Usage
--------------
+Getting Started
+---------------
 
- * [Get the library](http://phperror.net/download/php_error.php), it's just one file.
- * Place it into your project.
- * import the file
- * call: \better_error_messages\reportErrors();
- * ???
- * profit! \o/
+ * [Download](http://phperror.net/download/php_error.php), it's just one file.
+ * Place it in your project.
+ * import php_error.php
+ * call \better_error_messages\reportErrors()
 
 ```php
     <?php
