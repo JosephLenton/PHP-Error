@@ -96,7 +96,7 @@ The options include:
         </td>
     <tr>
     </tr>
-        catch_class_not_found</td>
+        <td>catch_class_not_found</td>
         <td>true</td>
         <td>
             When true, loading a class that does not exist will be caught.
