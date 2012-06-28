@@ -29,6 +29,11 @@ Features
 
 There is an online demo [here](http://phperror.net)
 
+Useful Pages
+------------
+
+: ### [API](https://github.com/JosephLenton/PHP-Error/wiki/API) :
+
 Example Usage
 -------------
 
@@ -66,110 +71,6 @@ Advanced Features
  * application files; these are prioritized when an error strikes!
  
 ![Application Aware Stack Trace](http://i.imgur.com/qdwnb.png)
-
-API - Functions
----------------
-
-Functions are provided for common case code.
-
-### \php_error\reportErrors( $options = null )
-
-This is the most common usage scenario.
-Just call 'reportErrors()' and you'll get the pretty HTML errors being shown up.
-
-```php
-    \php_error\reportErrors();
-```
-
-Optionally you can pass in an array of options,
-see the 'Options' section on how to set this up.
-
-Internally it will create a new \php_error\ErrorHandler,
-turn it on, and then return it.
-
-```php
-    $handler = \php_error\reportErrors();
-``` 
-
-So you can grab that to allow you to allow you to alter the error handling manually.
-
-### \php_error\withoutErrors( callable $callback )
-
-This will turn off errors, and then run the callback given, and then turn error reporting back on.
-That is useful if you have a block of code which you know will thrown an error,
-such as loading a third party library/framework,
-such as Wordpress.
-
-```php
-    withoutErrors( function() {
-        // run buggy code here
-    } );
-```
-
-The result from calling the callback is returned.
-
-API - \php_error\ErrorHandler class
------------------------------------
-
-There is also an ErrorHandler class to allow you greater control over the error reporting.
-
-### new \php_error\ErrorHandler( $options = null )
-
-Just like 'reportErrors', the ErrorHandler can optionally take an array of options you can set.
-See the 'options' section on what these are, and what they do.
-
-```php
-    $handler = new \php_error\ErrorHandler()
-```
-
-```php
-    $handler = new \php_error\ErrorHandler( array(
-        // set options here
-    ) );
-```
-
-The ErrorHandler will *not* be on by default,
-unlike with 'reportErrors'.
-You need to explicitely turn it on yourself.
-
-### $handler->isOn()
-
-Returns 'true' if error reporting using the handler is on, false if not.
-
-### $handler->isOff()
-
-Return 'false' if the error handler is on, and true if it is off.
-
-### $handler->turnOn()
-
-If error reporting is currently off, then it will now be turned on.
-
-This error handler is returned.
-
-### $handler->turnOff()
-
-If error reporting is off, then it is now turned on.
-
-This error handler is returned.
-
-### $handler->withoutErrors( callable $callback )
-
-Works just like the function withoutErrors;
-that actually just calls into this function.
-
-It turns off error reporting (if it is on),
-then runs the callback given,
-and then turns error reporting back on (if it was on).
-
-```php
-    $handler->withoutErrors( function() {
-        // run buggy code here
-    } );
-```
-
-The result from calling the callback is returned.
-
-If this is already off, then it'll just call it, and return the result.
 
 Options
 -------
