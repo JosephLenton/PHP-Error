@@ -73,7 +73,39 @@ Options
 The options can be passed into 'reportErrors' when it is called.
 They are stored in an associative array of 'option' mapping to the value.
 
-The options include:
+### Usage Examples
+
+Options can be passed in when calling 'reportErrors'.
+
+```php
+    // create an array of 'options', and pass them into report errors
+    $options = array();
+    \php_error\reportErrors( $options );
+```
+
+```php
+    // a range of example options set
+    // and then passed in when turning on reporting errors
+    $options = array(
+            'snippet_num_lines' => 10,
+            'background_title'  => 'Error!',
+            'error_reporting_off' => 0,
+            'error_reporting_on' => E_ALL | E_STRICT
+    );
+    \php_error\reportErrors( $options );
+```
+    
+If you chose to create the ErrorHandler manually (see below),
+then you can pass in the same options to it's constructor.
+
+```php
+    $options = array(
+            // options set here
+    );
+    $handler = new \php_error\ErrorHandler( $options );
+```
+
+### All Options
 
 <table>
     <tr>
@@ -171,16 +203,19 @@ The options include:
     </tr>
 </table>
 
-### php.ini
+### php.ini - changing the defaults
 
-All of the options can be set in the php.ini. This allows you to globally change the defaults used in the code.
-This is done by appending 'php_error.' before the option, and then setting it's value.
+The default values for the options can be set in your php.ini file.
+Just specify the option with 'php_error.' prefixed, and then set the new default value.
 
-For example to turn off catching ajax errors:
+For example to turn off catching ajax errors and changing the number of line numbers displayed:
 
 ```
     php_error.catch_ajax_errors = Off
+    php_error.snippet_num_line = 20
 ``` 
+
+This allows you to set these changes globally for all projects.
 
 php.ini options
 ---------------
@@ -200,3 +235,4 @@ If you manually call 'turnOn', it on will also silently fail, and still be set t
 
 My advice is to never put PHP-error into production. This option exists incase you forget,
 so you can disable it for all of your sites as a part of your global configuration.
+
