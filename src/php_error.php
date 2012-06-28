@@ -847,24 +847,36 @@
                 $newFolders = array();
                 $newLongest = 0;
 
-                foreach ( $folders as $i => $folder ) {
-                    $folder = str_replace( '\\', '/', $folder );
-                    $folder = preg_replace( '/(^\\/+)|(\\/+$)/', '', $folder );
-                    $parts = explode( '/', $folder );
-                    $count = count( $parts );
-
-                    $newLongest = max( $newLongest, $count );
-                    
-                    if ( isset($newFolders[$count]) ) {
-                        $folds = &$newFolders[$count];
-                        $folds[]= $folder;
+                if ( $folders ) {
+                    if ( is_array($folders) ) {
+                        foreach ( $folders as $folder ) {
+                            ErrorHandler::setFoldersInner( $origFolders, $newLongest, $folder );
+                        }
+                    } else if ( is_string($folders) ) {
+                        ErrorHandler::setFoldersInner( $origFolders, $newLongest, $folders );
                     } else {
-                        $newFolders[$count] = array( $folder );
+                        throw new Exception( "Unknown value given for folder: " . $folders );
                     }
                 }
 
                 $origFolders = $newFolders;
                 $longest     = $newLongest;
+            }
+
+            private static function setFoldersInner( &$origFolders, &$longest, $folder ) {
+                $folder = str_replace( '\\', '/', $folder );
+                $folder = preg_replace( '/(^\\/+)|(\\/+$)/', '', $folder );
+                $parts  = explode( '/', $folder );
+                $count  = count( $parts );
+
+                $newLongest = max( $newLongest, $count );
+                
+                if ( isset($newFolders[$count]) ) {
+                    $folds = &$newFolders[$count];
+                    $folds[]= $folder;
+                } else {
+                    $newFolders[$count] = array( $folder );
+                }
             }
 
             private $cachedFiles;
@@ -974,10 +986,10 @@
                 $appFolders                     = ErrorHandler::optionsPop( $options, 'application_folders', null );
 
                 if ( $ignoreFolders !== null ) {
-                    $this->setFolders( $this->ignoreFolders, $this->ignoreFoldersLongest, $ignoreFolders );
+                    ErrorHandler::setFolders( $this->ignoreFolders, $this->ignoreFoldersLongest, $ignoreFolders );
                 }
                 if ( $appFolders !== null ) {
-                    $this->setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
+                    ErrorHandler::setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
                 }
 
                 $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on' , -1 );
