@@ -2857,7 +2857,7 @@
                     h1,
                     h2,
                     .background {
-                        font: 100% monaco, consolas, monospace;
+                        font: 17px monaco, consolas, monospace;
                     }
 
                     h1 {
