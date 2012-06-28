@@ -49,6 +49,8 @@ Example Usage
 Documentation
 -------------
 
+### [Example Setup](https://github.com/JosephLenton/PHP-Error/wiki/Example-Setup)
+
 ### [API](https://github.com/JosephLenton/PHP-Error/wiki/API)
 
 ### [Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)
