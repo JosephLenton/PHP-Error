@@ -850,10 +850,10 @@
                 if ( $folders ) {
                     if ( is_array($folders) ) {
                         foreach ( $folders as $folder ) {
-                            ErrorHandler::setFoldersInner( $origFolders, $newLongest, $folder );
+                            ErrorHandler::setFoldersInner( $newFolders, $newLongest, $folder );
                         }
                     } else if ( is_string($folders) ) {
-                        ErrorHandler::setFoldersInner( $origFolders, $newLongest, $folders );
+                        ErrorHandler::setFoldersInner( $newFolders, $newLongest, $folders );
                     } else {
                         throw new Exception( "Unknown value given for folder: " . $folders );
                     }
@@ -863,7 +863,7 @@
                 $longest     = $newLongest;
             }
 
-            private static function setFoldersInner( &$origFolders, &$longest, $folder ) {
+            private static function setFoldersInner( &$newFolders, &$newLongest, $folder ) {
                 $folder = str_replace( '\\', '/', $folder );
                 $folder = preg_replace( '/(^\\/+)|(\\/+$)/', '', $folder );
                 $parts  = explode( '/', $folder );
