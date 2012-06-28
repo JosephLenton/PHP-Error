@@ -32,7 +32,7 @@ There is an online demo [here](http://phperror.net)
 Useful Pages
 ------------
 
-: ### [API](https://github.com/JosephLenton/PHP-Error/wiki/API) :
+:__[API](https://github.com/JosephLenton/PHP-Error/wiki/API)__:
 
 Example Usage
 -------------
