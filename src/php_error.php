@@ -998,9 +998,9 @@
                     $this->applicationRoot =  str_replace( '\\', '/', $dir );
                 }
 
-                $this->catchClassNotFound       = ErrorHandler::optionsPop( $options, 'catch_class_not_found' , true  );
-                $this->catchSurpressedErrors    = ErrorHandler::optionsPop( $options, 'catch_supressed_errors', false );
-                $this->catchAjaxErrors          = ErrorHandler::optionsPop( $options, 'catch_ajax_errors'     , true  );
+                $this->catchClassNotFound       = !! ErrorHandler::optionsPop( $options, 'catch_class_not_found' , true  );
+                $this->catchSurpressedErrors    = !! ErrorHandler::optionsPop( $options, 'catch_supressed_errors', false );
+                $this->catchAjaxErrors          = !! ErrorHandler::optionsPop( $options, 'catch_ajax_errors'     , true  );
 
                 $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
