@@ -2698,7 +2698,7 @@
                                             $highlightLine = $fileLinesSet->getLine();
 
                                             ?><style>
-                                                .ul_<?= $id ?> { margin-bottom: -<?= ($ulI+1)*200 ?>%; top: -<?= $ulI*20 ?>px; }
+                                                .ul_<?= $id ?> { margin-bottom: -<?= ($ulI+1)*200 ?>%; }
                                             </style><?
 
                                             $ulI++;
@@ -3025,9 +3025,11 @@
                         color: #666;
                     }
                     #error-files {
+                        line-height: 0;
+                        font-size: 0;
+
                         position: relative;
-                        margin-bottom: 24px;
-                        padding: 3px 18px 9px 0;
+                        padding: 3px 0 48px 0;
 
                         display: inline-block;
 
@@ -3037,8 +3039,6 @@
                         padding-left: 128px;
                     }
                         .error-file-lines {
-                            position: relative;
-
                             visibility: hidden;
                             display: inline-block;
                             opacity: 0;
@@ -3058,7 +3058,7 @@
                             margin-bottom: 0;
                         }
                             .error-file-line {
-                                line-height: 18px;
+                                line-height: 21px;
 
                                 font-size: 16px;
                                 color: #ddd;
