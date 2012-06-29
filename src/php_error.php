@@ -2723,20 +2723,13 @@
                             <? if ( $fileLinesSets ) { ?>
                                 <div id="error-files">
                                     <?
-                                        $ulI = 0;
                                         foreach ( $fileLinesSets as $fileLinesSet ) {
                                             $id            = $fileLinesSet->getHTMLID();
                                             $fileLines     = $fileLinesSet->getLines();
                                             $show          = $fileLinesSet->isShown();
                                             $highlightLine = $fileLinesSet->getLine();
-
-                                            ?><style>
-                                                .ul_<?= $id ?> { margin-bottom: -<?= ($ulI+1)*200 ?>%; }
-                                            </style><?
-
-                                            $ulI++;
                                         ?>
-                                            <div id="<?= $id ?>" class="error-file-lines ul_<?= $id ?> <?= $show ? 'show' : '' ?>">
+                                            <div id="<?= $id ?>" class="error-file-lines <?= $show ? 'show' : '' ?>">
                                                 <?
                                                     foreach ( $fileLines as $lineNum => $origLine ) {
                                                         $line = ltrim($origLine, ' ');
@@ -3062,7 +3055,7 @@
                         font-size: 0;
 
                         position: relative;
-                        padding: 3px 0 48px 0;
+                        padding: 3px 0 24px 0;
 
                         display: inline-block;
 
@@ -3070,13 +3063,20 @@
                         -moz-box-sizing: border-box;
                         box-sizing: border-box;
                         padding-left: 128px;
+
+                        overflow: hidden;
                     }
                         .error-file-lines {
-                            visibility: hidden;
                             display: inline-block;
                             opacity: 0;
+                            visibility: hidden;
+
+                            float: right;
+                            clear: none;
 
                             width: 100%;
+                            overflow: hidden;
+                            margin-right: -100%;
 
                             -webkit-transition: opacity 120ms linear;
                                -moz-transition: opacity 120ms linear;
@@ -3085,10 +3085,15 @@
                                     transition: opacity 120ms linear;
                         }
                         .error-file-lines.show {
+                            height: auto;
+
+                            float: left;
                             visibility: visible;
                             opacity: 1;
                             z-index: 1;
-                            margin-bottom: 0;
+
+                            overflow: visible;
+                            margin: 0;
                         }
                             .error-file-line {
                                 line-height: 21px;
