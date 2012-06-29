@@ -1341,7 +1341,7 @@
                                 preg_replace(
                                         '/(\r\n)|(\n\r)|\r/',
                                         "\n",
-                                        $contents
+                                        str_replace( "\t", '    ', $contents )
                                 )
                         );
 
@@ -1877,11 +1877,11 @@
                                 list( $type, $file ) = $this->getFolderType( $root, $trace['file'] );
                                 $klass = ErrorHandler::folderTypeToCSS( $type );
 
-                                $trace['html_file'] = "<span class='filename $klass'>$file</span>";
+                                $trace['file_type'] = $type;
                                 $trace['is_native'] = false;
                             } else {
                                 $file = '[Internal PHP]';
-                                $trace['html_file'] = "<span class='file-internal-php'>$file</span>";
+                                $trace['file_type'] = '';
                                 $trace['is_native'] = true;
                             }
 
@@ -1909,18 +1909,34 @@
 
                     foreach ( $stackTrace as $i => $trace ) {
                         if ( $trace ) {
-                            $line     = str_pad( $trace['line']     , $lineLen, ' ', STR_PAD_LEFT  );
-                            $file     = $trace['html_file'] . str_pad( '', $fileLen-strlen($trace['file']), ' ', STR_PAD_LEFT );
+                            // line
+                            $line = $trace['line'];
+                            $line = str_pad( $trace['line']     , $lineLen, ' ', STR_PAD_LEFT  );
 
-                            $line = "<span class='linenumber'>$line</span>";
+                            // file
+                            $file = $trace['file'];
+                            $fileKlass = '';
+                            if ( $trace['is_native'] ) {
+                                $fileKlass = 'file-internal-php';
+                            } else {
+                                $fileKlass = 'filename ' . ErrorHandler::folderTypeToCSS( $trace['file_type'] );
+                            }
+                            $file = $file . str_pad( '', $fileLen-strlen($file), ' ', STR_PAD_LEFT );
 
+                            // info
                             $info = $trace['info'];
-                            $info = str_replace( "\n", '\n', $info );
-                            $info = str_replace( "\r", '\r', $info );
+                            if ( $info !== '' ) {
+                                $info = str_replace( "\n", '\n', $info );
+                                $info = str_replace( "\r", '\r', $info );
+                            } else {
+                                $info = '&nbsp;';
+                            }
 
-                            $stackStr = ( $info !== '' ) ?
-                                    "$line    $file    $info" :
-                                    "$line    $file" ;
+                            // line + file + info
+                            $stackStr =
+                                    "<td class='linenumber'>$line</td>" .
+                                    "<td class='$fileKlass'>$file</td>" .
+                                    "<td class='lineinfo'>$info</td>"   ;
 
                             if ( $trace['is_native'] ) {
                                 $cssClass = 'is-native ';
@@ -1939,11 +1955,11 @@
                                 $data = 'data-file-lines-id="' . $trace['file-lines-id'] . '"';
                             }
 
-                            $stackTrace[$i] = "<div class='error-stack-trace-line $cssClass' $data>$stackStr</div>";
+                            $stackTrace[$i] = "<tr class='error-stack-trace-line $cssClass' $data>$stackStr</tr>";
                         }
                     }
 
-                    return join( "", $stackTrace );
+                    return '<table id="error-stack-trace">' . join( "", $stackTrace ) . '</table>';
                 } else {
                     return null;
                 }
@@ -2673,30 +2689,44 @@
                             <h2 id="error-file" class="<?= $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?= $errLine ?></span> <span id="error-filename" class="<?= $errFileType ?>"><?= $errFile ?></span></h2>
                             <? if ( $fileLinesSets ) { ?>
                                 <div id="error-files">
-                                    <ul class="error-file-force-size"><?
-                                        for ( $i = 0; $i < $numFileLines; $i++ ) {
-                                            ?><li class="error-file-line"></li><?
-                                        }
-                                    ?></ul><?
+                                    <?
+                                        $ulI = 0;
                                         foreach ( $fileLinesSets as $fileLinesSet ) {
                                             $id            = $fileLinesSet->getHTMLID();
                                             $fileLines     = $fileLinesSet->getLines();
                                             $show          = $fileLinesSet->isShown();
                                             $highlightLine = $fileLinesSet->getLine();
+
+                                            ?><style>
+                                                .ul_<?= $id ?> { margin-bottom: -<?= ($ulI+1)*200 ?>%; top: -<?= $ulI*20 ?>px; }
+                                            </style><?
+
+                                            $ulI++;
                                         ?>
-                                            <ul id="<?= $id ?>" class="error-file-lines <?= $show ? 'show' : '' ?>">
+                                            <div id="<?= $id ?>" class="error-file-lines ul_<?= $id ?> <?= $show ? 'show' : '' ?>">
                                                 <?
-                                                    foreach ( $fileLines as $lineNum => $line ) {
-                                                        ?><li class="error-file-line <?= ($lineNum === $highlightLine) ? 'highlight' : '' ?>"><?= $line ?></li><?
+                                                    foreach ( $fileLines as $lineNum => $origLine ) {
+                                                        $line = ltrim($origLine, ' ');
+                                                        $numSpaces = strlen($origLine) - strlen($line);
+
+                                                        $size = 8*$numSpaces + 64;
+                                                        $style = "style='padding-left: " . $size . "px; text-indent: -" . $size . "px;'";
+
+                                                        for ( $i = 0; $i < $numSpaces; $i++ ) {
+                                                            $line = "&nbsp;$line";
+                                                        }
+
+                                                        ?><div <?= $style ?> class="error-file-line <?= ($lineNum === $highlightLine) ? 'highlight' : '' ?>"><?= $line ?></div><?
                                                     }
                                                 ?>
-                                            </ul>
+                                            </div>
                                     <? } ?>
                                 </div>
-                            <? } ?>
-                            <? if ( $stackTrace !== null ) { ?>
-                                <div id="error-stack-trace"><?= $stackTrace ?></div>
                             <? }
+                            
+                            if ( $stackTrace !== null ) {
+                                echo $stackTrace;
+                            }
                         },
 
                         /**
@@ -2996,22 +3026,24 @@
                     }
                     #error-files {
                         position: relative;
-                        margin-left  : 128px;
                         margin-bottom: 24px;
-                        padding: 0 18px 9px 0;
+                        padding: 3px 18px 9px 0;
 
                         display: inline-block;
-                    }
-                        .error-file-force-size {
-                        }
-                        .error-file-lines {
-                            position: absolute;
-                            top : 0;
-                            left: 0;
 
+                        width: 100%;
+                        -moz-box-sizing: border-box;
+                        box-sizing: border-box;
+                        padding-left: 128px;
+                    }
+                        .error-file-lines {
+                            position: relative;
+
+                            visibility: hidden;
                             display: inline-block;
                             opacity: 0;
-                            min-width: 320px;
+
+                            width: 100%;
 
                             -webkit-transition: opacity 120ms linear;
                                -moz-transition: opacity 120ms linear;
@@ -3020,13 +3052,16 @@
                                     transition: opacity 120ms linear;
                         }
                         .error-file-lines.show {
+                            visibility: visible;
                             opacity: 1;
                             z-index: 1;
+                            margin-bottom: 0;
                         }
                             .error-file-line {
+                                line-height: 18px;
+
                                 font-size: 16px;
                                 color: #ddd;
-                                white-space: pre;
                                 list-style-type: none;
                                 /* needed for empty lines */
                                 min-height: 20px;
@@ -3034,27 +3069,68 @@
                                 padding-bottom: 1px;
 
                                 border-radius: 2px;
+
+                                -moz-box-sizing: border-box;
+                                box-sizing: border-box;
+
+                                display: inline-block;
+                                float: left;
+                                clear: both;
                             }
                     <?
                     /*
                      * Stack Trace
                      */
                     ?>
+                    #error-stack-trace,
+                    .error-stack-trace-line {
+                        border-spacing: 0;
+                        width: 100%;
+                    }
                     #error-stack-trace {
-                        font-size: 18px;
                         line-height: 28px;
-                        white-space: pre;
-
                         cursor: pointer;
                     }
                         .error-stack-trace-line {
-                            -moz-box-sizing: border-box;
-                            box-sizing: border-box;
-
-                            width: 100%;
-                            padding: 3px 18px;
-                            border-radius: 2px;
+                            float: left;
                         }
+                            .error-stack-trace-line:first-of-type > td:first-of-type {
+                                border-top-left-radius: 2px;
+                            }
+                            .error-stack-trace-line:first-of-type > td:last-of-type {
+                                border-top-right-radius: 2px;
+                            }
+                            .error-stack-trace-line:last-of-type > td:first-of-type {
+                                border-bottom-left-radius: 2px;
+                            }
+                            .error-stack-trace-line:last-of-type > td:last-of-type {
+                                border-bottom-right-radius: 2px;
+                            }
+
+                            .error-stack-trace-line > td {
+                                padding: 3px 0;
+                                vertical-align: top;
+                            }
+                            .error-stack-trace-line > .linenumber,
+                            .error-stack-trace-line > .filename,
+                            .error-stack-trace-line > .lineinfo {
+                                padding-left:  18px;
+                                padding-right: 12px;
+                            }
+                            .error-stack-trace-line > .linenumber,
+                            .error-stack-trace-line > .filename {
+                                white-space: pre;
+                            }
+                            .error-stack-trace-line > .linenumber {
+                                text-align: right;
+                            }
+                            .error-stack-trace-line > .filename {
+                            }
+                            .error-stack-trace-line > .lineinfo {
+                                padding-right:18px;
+                                padding-left: 82px;
+                                text-indent: -64px;
+                            }
                     <?
                     /*
                      * Code and Stack highlighting colours
@@ -3068,7 +3144,6 @@
                     ?>
                     .pre-highlight,
                     .highlight {
-                        width: 100%;
                     }
                     .is-native,
                     .pre-highlight {
