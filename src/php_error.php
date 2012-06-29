@@ -544,6 +544,8 @@
                                                     explode( "\n", $code )
                                             ) .
                                         "</span>" ;
+                            } else if ( strrpos($code, "\n") === strlen($code)-1 ) {
+                                $append = "<span class='$class'>" . substr($code, 0, strlen($code)-1) . "</span>\n";
                             } else {
                                 $append = "<span class='$class'>$code</span>";
                             }
