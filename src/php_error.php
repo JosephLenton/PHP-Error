@@ -1943,7 +1943,6 @@
                     foreach ( $stackTrace as $i => $trace ) {
                         if ( $trace ) {
                             // line
-                            $line = $trace['line'];
                             $line = str_pad( $trace['line']     , $lineLen, ' ', STR_PAD_LEFT  );
 
                             // file
@@ -1958,7 +1957,7 @@
 
                             // info
                             $info = $trace['info'];
-                            if ( $info !== '' ) {
+                            if ( $info ) {
                                 $info = str_replace( "\n", '\n', $info );
                                 $info = str_replace( "\r", '\r', $info );
                             } else {
@@ -3062,7 +3061,7 @@
                         width: 100%;
                         -moz-box-sizing: border-box;
                         box-sizing: border-box;
-                        padding-left: 128px;
+                        padding-left: 148px;
 
                         overflow: hidden;
                     }
@@ -3151,17 +3150,20 @@
                             }
                             .error-stack-trace-line > .linenumber,
                             .error-stack-trace-line > .filename,
+                            .error-stack-trace-line > .file-internal-php,
                             .error-stack-trace-line > .lineinfo {
                                 padding-left:  18px;
                                 padding-right: 12px;
                             }
                             .error-stack-trace-line > .linenumber,
+                            .error-stack-trace-line > .file-internal-php,
                             .error-stack-trace-line > .filename {
                                 white-space: pre;
                             }
                             .error-stack-trace-line > .linenumber {
                                 text-align: right;
                             }
+                            .error-stack-trace-line > .file-internal-php,
                             .error-stack-trace-line > .filename {
                             }
                             .error-stack-trace-line > .lineinfo {
