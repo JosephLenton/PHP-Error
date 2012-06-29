@@ -1399,6 +1399,39 @@
 
                         $fileLines = array_splice( $lines, $minLine, $maxLine-$minLine );
 
+                        $stripSize = -1;
+                        foreach ( $fileLines as $i => $line ) {
+                            $newLine = ltrim( $line, ' ' );
+
+                            if ( strlen($newLine) > 0 ) {
+                                $numSpaces = strlen($line) - strlen($newLine);
+
+                                if ( $stripSize === -1 ) {
+                                    $stripSize = $numSpaces;
+                                } else {
+                                    $stripSize = min( $stripSize, $numSpaces );
+                                }
+                            } else {
+                                $fileLines[$i] = $newLine;
+                            }
+                        }
+                        if ( $stripSize > 0 ) {
+                            /*
+                             * It's pretty common that PHP code is not flush with the left hand edge,
+                             * so subtract 4 spaces, if we can,
+                             * to account for this.
+                             */
+                            if ( $stripSize > 4 ) {
+                                $stripSize -= 4;
+                            }
+
+                            foreach ( $fileLines as $i => $line ) {
+                                if ( strlen($line) > $stripSize ) {
+                                    $fileLines[$i] = substr( $line, $stripSize );
+                                }
+                            }
+                        }
+
                         $fileLines = join( "\n", $fileLines );
                         $fileLines = ErrorHandler::syntaxHighlight( $fileLines );
                         $fileLines = explode( "\n", $fileLines );
