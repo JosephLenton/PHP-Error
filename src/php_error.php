@@ -116,6 +116,39 @@
         $_php_error_already_setup = true;
 
         /*
+         * These are used as token identifiers by PHP.
+         * 
+         * If they are missing, then they should never pop out of PHP,
+         * so we just give them their future value.
+         * 
+         * They are primarily here so I don't have to alter the 5.3
+         * compliant code. Instead I can delete pre-5.3 code (this
+         * code), in the future.
+         * 
+         * As long as the value is unique, and does not clash with PHP,
+         * then any number could be used. That is why they start counting
+         * at 100,000.
+         */
+        if ( ! defined('T_DIR') ) {
+            define( 'T_DIR', 100001 );
+        }
+        if ( ! defined('T_GOTO') ) {
+            define( 'T_GOTO', 100002 );
+        }
+        if ( ! defined('T_NAMESPACE') ) {
+            define( 'T_NAMESPACE', 100003 );
+        }
+        if ( ! defined('T_NS_C') ) {
+            define( 'T_NS_C', 100004 );
+        }
+        if ( ! defined('T_NS_SEPARATOR') ) {
+            define( 'T_NS_SEPARATOR', 100005 );
+        }
+        if ( ! defined('T_USE') ) {
+            define( 'T_USE', 100006 );
+        }
+
+        /*
          * Check if it's empty, in case this file is loaded multiple times.
          */
         if ( ! isset($_php_error_global_handler) ) {
