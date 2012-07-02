@@ -893,7 +893,7 @@
                 }
             }
 
-            private static function identifyTypeHTML( $arg, $recurseLevels=1 ) {
+            public static function identifyTypeHTML( $arg, $recurseLevels=1 ) {
                 if ( ! is_array($arg) && !is_object($arg) ) {
                     if ( is_string($arg) ) {
                         return "<span class='syntax-string'>\"$arg\"</span>";
