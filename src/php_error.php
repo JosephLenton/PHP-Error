@@ -453,6 +453,21 @@
             );
 
             /**
+             * A list of methods which are known to call the autoloader,
+             * but should not error, if the class is not found.
+             * 
+             * They are allowed to fail, so we don't store a class not
+             * found exception if they do.
+             */
+            private static $SAFE_AUTOLOADER_FUNCTIONS = array(
+                    'class_exists',
+                    'interface_exists',
+                    'method_exists',
+                    'property_exists',
+                    'is_subclass_of'
+            );
+
+            /**
              * Looks up a description for the symbol given,
              * and if found, it is returned.
              * 
@@ -2300,6 +2315,7 @@
                     if ( ! $self->isShutdownRegistered ) {
                         if ( $self->catchClassNotFound ) {
                             $classException = &$self->classNotFoundException;
+                            $autoloaderFuns = ErrorHandler::$SAFE_AUTOLOADER_FUNCTIONS;
 
                             /*
                              * When called, the callback will move it's self to the back of the list,
@@ -2308,7 +2324,7 @@
                              * This is to avoid conflicting with other class loaders.
                              */
                             $classNotFoundFun = null;
-                            $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun, &$classException ) {
+                            $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun, &$classException, &$autoloaderFuns ) {
                                 if ( $self->isOn() ) {
                                     $funs = spl_autoload_functions();
 
@@ -2371,11 +2387,8 @@
                                                 $function = $row['function'];
 
                                                 // they are just checking, so don't error
-                                                if (
-                                                        $function === 'class_exists' ||
-                                                        $function === 'interface_exists'
-                                                ) {
-                                                    $error =false;
+                                                if ( in_array($function, $autoloaderFuns, true) ) {
+                                                    $error = false;
                                                     break;
                                                 // not us, and not the autoloader, so error!
                                                 } else if (

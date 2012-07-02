@@ -7,6 +7,7 @@
 	}
 
 	function b() {
+        interface_exists( 'FooBar' );
 		$f = new FooBar();
 	}
 
