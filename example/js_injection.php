@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+<?
+    session_start();
+    $_SESSION['DKDKDK']='something';
+?><!DOCTYPE html>
 <?
 	require( __DIR__ . '/../src/php_error.php' );
 	\php_error\reportErrors();
@@ -8,7 +11,7 @@
 
 <script>
 	$(document).ready( function() {
-		$.get( '/example/unknown_variable.php', function(str) {
+		$.post( '/example/unknown_variable.php?something=blah_blah&dkkddk=something_else', { foo:[ 1234, 9393, null, [["kdkdkdk"]]], bar: 993, foobar: "dkkdkslfjdslkfj" }, function(str) {
 			console.log( str );
 		} );
 	});

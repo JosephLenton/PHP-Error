@@ -893,6 +893,44 @@
                 }
             }
 
+            private static function identifyTypeHTML( $arg, $recurseLevels=1 ) {
+                if ( ! is_array($arg) && !is_object($arg) ) {
+                    if ( is_string($arg) ) {
+                        return "<span class='syntax-string'>\"$arg\"</span>";
+                    } else {
+                        return "<span class='syntax-literal'>" . var_export( $arg, true ) . '</span>';
+                    }
+                } else if ( is_array($arg) ) {
+                    if ( count($arg) === 0 ) {
+                        return "[]";
+                    } else if ( $recurseLevels > 0 ) {
+                        $argArr = array();
+
+                        foreach ($arg as $i => $ag) {
+                            $argArr[]= ErrorHandler::identifyTypeHTML( $ag, $recurseLevels-1 );
+                        }
+
+                        if ( ($recurseLevels % 2) === 0 ) {
+                            return "["  . join(', ', $argArr) .  "]";
+                        } else {
+                            return "[ " . join(', ', $argArr) . " ]";
+                        }
+                    } else {
+                        return "[...]";
+                    }
+                } else if ( get_class($arg) === 'Closure' ) {
+                    return '<span class="syntax-variable">$Closure</span>()';
+                } else {
+                    $argKlass = get_class( $arg );
+
+                    if ( preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $argKlass) ) {
+                        return '<span class="syntax-literal">$' . $argKlass . '</span>';
+                    } else {
+                        return '<span class="syntax-variable">$' . $argKlass . '</span>';
+                    }
+                }
+            }
+
             private $cachedFiles;
 
             private $isShutdownRegistered;
@@ -1833,39 +1871,7 @@
                     $functionLen = 0;
                     $fileLen     = 0;
 
-                    $identifyType = function( $arg, $recurse, $identifyType ) {
-                        if ( ! is_array($arg) && !is_object($arg) ) {
-                            if ( is_string($arg) ) {
-                                return "<span class='syntax-string'>\"$arg\"</span>";
-                            } else {
-                                return "<span class='syntax-literal'>" . var_export( $arg, true ) . '</span>';
-                            }
-                        } else if ( is_array($arg) ) {
-                            if ( count($arg) === 0 ) {
-                                return "[]";
-                            } else if ( $recurse ) {
-                                $argArr = array();
-
-                                foreach ($arg as $i => $ag) {
-                                    $argArr[]= $identifyType( $ag, false, $identifyType );
-                                }
-
-                                return "[" . join(', ', $argArr) . "]";
-                            } else {
-                                return "[...]";
-                            }
-                        } else if ( get_class($arg) === 'Closure' ) {
-                            return '<span class="syntax-variable">$Closure</span>()';
-                        } else {
-                            $argKlass = get_class( $arg );
-
-                            if ( preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $argKlass) ) {
-                                return '<span class="syntax-literal">$' . $argKlass . '</span>';
-                            } else {
-                                return '<span class="syntax-variable">$' . $argKlass . '</span>';
-                            }
-                        }
-                    };
+                    ;
 
                     // parse the stack trace, and remove the long urls
                     foreach ( $stackTrace as $i => $trace ) {
@@ -1898,7 +1904,7 @@
                                 $args = array();
                                 if ( isset($trace['args']) ) {
                                     foreach ( $trace['args'] as $arg ) {
-                                        $args[]= $identifyType( $arg, true, $identifyType );
+                                        $args[]= ErrorHandler::identifyTypeHTML( $arg, 1 );
                                     }
                                 }
 
@@ -2074,12 +2080,69 @@
                     $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
                     $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
-                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines );
+                    // load the session, if it's there
+                    if (isset($_COOKIE[session_name()])) {
+                        session_start();
+                    }
+
+                    $dump = $this->generateDumpHTML(
+                            array(
+                                    'post'    => isset($_POST)    ? $_POST    : array(),
+                                    'get'     => isset($_GET)     ? $_GET     : array(),
+                                    'session' => isset($_SESSION) ? $_SESSION : array(),
+                                    'cookies' => isset($_COOKIE)  ? $_COOKIE  : array(),
+                            ),
+
+                            getallheaders(),
+                            apache_response_headers(),
+
+                            $_SERVER
+                    );
+                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
 
                     // exit in order to end processing
                     $this->turnOff();
                     exit(0);
                 }
+            }
+
+            private function generateDumpHTML( $arrays, $request, $response, $server ) {
+                $arrToHtml = function( $name, $array, $css='' ) {
+                    $max = 0;
+
+                    foreach ( $array as $e => $v ) {
+                        $max = max( $max, strlen( $e ) );
+                    }
+
+                    $snippet = "<h2 class='error_dump_header'>$name</h2>";
+
+                    foreach ( $array as $e => $v ) {
+                        $e = str_pad( $e, $max, ' ', STR_PAD_RIGHT );
+
+                        $e = htmlentities( $e );
+                        $v = ErrorHandler::identifyTypeHTML( $v, 3 );
+
+                        $snippet .= "<div class='error_dump_key'>$e</div><div class='error_dump_mapping'>=&gt;</div><div class='error_dump_value'>$v</div>";
+                    }
+
+                    return "<div class='error_dump $css'>$snippet</div>";
+                };
+
+                $html = '';
+                foreach ( $arrays as $key => $value ) {
+                    if ( isset($value) && $value ) {
+                        $html .= $arrToHtml( $key, $value );
+                    } else {
+                        unset($arrays[$key]);
+                    }
+                }
+
+                return "<div class='error_dumps'>" .
+                            $html .
+                            $arrToHtml( 'request', $request, 'dump_request' ) .
+                            $arrToHtml( 'response', $response, 'dump_response' ) .
+                            $arrToHtml( 'server', $server, 'dump_server' ) .
+                        "</div>";
             }
 
             private function generateFileLineSets( $srcErrFile, $srcErrLine, &$stackTrace ) {
@@ -2716,7 +2779,7 @@
              * The actual display logic.
              * This outputs the error details in HTML.
              */
-            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines ) {
+            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
                 $applicationRoot = $this->applicationRoot;
                 $serverName      = $this->serverName;
                 $backgroundText  = $this->backgroundText;
@@ -2736,7 +2799,8 @@
                                 $requestUrl,
                                 $backgroundText, $serverName, $applicationRoot,
                                 $message, $errLine, $errFile, $errFileType, $stackTrace,
-                                &$fileLinesSets, $numFileLines
+                                &$fileLinesSets, $numFileLines,
+                                $dumpInfo
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -2787,6 +2851,10 @@
                             
                             if ( $stackTrace !== null ) {
                                 echo $stackTrace;
+                            }
+
+                            if ( $dumpInfo !== null ) {
+                                echo $dumpInfo;
                             }
                         },
 
@@ -3207,6 +3275,66 @@
                                 padding-left: 82px;
                                 text-indent: -64px;
                             }
+                    <?
+                    /*
+                     * Error Dump Info (post, get, session)
+                     */
+                    ?>
+                    .error_dumps {
+                        margin-top: 48px;
+                        padding-top: 32px;
+                        width: 100%;
+                        max-width: 100%;
+                        overflow: hidden;
+                    }
+                        .error_dump {
+                            float: left;
+                            clear: none;
+
+                            -moz-box-sizing: border-box;
+                            box-sizing: border-box;
+
+                            padding: 0 32px 24px 12px;
+                            max-width: 100%;
+                        }
+                        .error_dump.dump_request {
+                            clear: left;
+                            max-width: 50%;
+                            min-width: 600px;
+                        }
+                        .error_dump.dump_response {
+                            max-width: 50%;
+                            min-width: 600px;
+                        }
+                        .error_dump.dump_server {
+                            width: 100%;
+                            clear: both;
+                        }
+                        .error_dump_header {
+                            font-size: 24px;
+                            color: #eb4; 
+                            margin: 0;
+                            margin-left: -6px;
+                        }
+                        .error_dump_key,
+                        .error_dump_mapping,
+                        .error_dump_value {
+                            white-space: pre;
+                            padding: 3px 6px 3px 6px;
+                            float: left;
+                        }
+                        .error_dump_key {
+                            clear: left;
+                        }
+                        .error_dump_mapping {
+                            padding: 3px 12px;
+                        }
+                        .error_dump_value {
+                            clear: right;
+                            word-break: break-word;
+                            max-width: 100%;
+                        }
+                        
                     <?
                     /*
                      * Code and Stack highlighting colours
