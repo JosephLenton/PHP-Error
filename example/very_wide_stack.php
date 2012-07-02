@@ -1,5 +1,5 @@
-<?
-	require( __DIR__ . '/../src/php_error.php' );
+<?php
+	require( dirname(__FILE__) . '/../src/php_error.php' );
 	\php_error\reportErrors();
 
 	function a() {
