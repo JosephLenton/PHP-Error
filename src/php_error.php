@@ -2299,6 +2299,8 @@
 
                     if ( ! $self->isShutdownRegistered ) {
                         if ( $self->catchClassNotFound ) {
+                            $classException = &$self->classNotFoundException;
+
                             /*
                              * When called, the callback will move it's self to the back of the list,
                              * if it's not there already.
@@ -2306,7 +2308,7 @@
                              * This is to avoid conflicting with other class loaders.
                              */
                             $classNotFoundFun = null;
-                            $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun ) {
+                            $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun, &$classException ) {
                                 if ( $self->isOn() ) {
                                     $funs = spl_autoload_functions();
 
@@ -2358,6 +2360,8 @@
                                         }
                                         spl_autoload_register( $classNotFoundFun );
                                     } else {
+                                        $classException = null;
+
                                         // search the stack first, to check if we are running from 'class_exists' before we error
                                         $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
                                         $error = true;
@@ -2368,6 +2372,7 @@
 
                                                 // they are just checking, so don't error
                                                 if (
+                                                        $function === 'class_exists' ||
                                                         $function === 'interface_exists'
                                                 ) {
                                                     $error =false;
@@ -2384,7 +2389,7 @@
                                         }
 
                                         if ( $error ) {
-                                            $self->classNotFoundException = new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
+                                            $classException = new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
                                         }
                                     }
                                 }
