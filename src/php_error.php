@@ -1031,6 +1031,12 @@
                 $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
 
+                $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
+                if ( $wordpress ) {
+                    // php doesn't like | in constants and privates, so just set it directly : (
+                    $this->defaultErrorReportingOn = E_ERROR | E_WARNING | E_PARSE & ~E_DEPRECATED & ~E_STRICT;
+                }
+
                 if ( $options ) {
                     foreach ( $options as $key => $val ) {
                         throw new InvalidArgumentException( "Unknown option given $key" );
