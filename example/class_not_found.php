@@ -7,7 +7,7 @@
 	}
 
 	function b() {
-		$foo = $bar;
+		$f = new FooBar();
 	}
 
 	echo '{a: 39}';
