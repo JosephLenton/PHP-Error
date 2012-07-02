@@ -961,6 +961,8 @@
 
             private $lastGlobalErrorHandler;
 
+            private $classNotFoundException;
+
             /**
              * = Options =
              * 
@@ -1068,6 +1070,8 @@
 
                 $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
+
+                $this->classNotFoundException   = null;
 
                 $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
                 if ( $wordpress ) {
@@ -2060,6 +2064,22 @@
              * more than that.
              */
             public function reportError( $code, $message, $errLine, $errFile, $stackTrace=null, $ex=null ) {
+                if (
+                        $stackTrace === null &&
+                        $code === 1 &&
+                        strpos($message, "Class ") === 0 &&
+                        strpos($message, "not found") !== false &&
+                        $this->classNotFoundException !== null
+                ) {
+                    $ex = $this->classNotFoundException;
+
+                    $code       = $ex->getCode();
+                    $message    = $ex->getMessage();
+                    $errLine    = $ex->getLine();
+                    $errFile    = $ex->getFile();
+                    $stackTrace = $ex->getTrace();
+                }
+
                 $this->logError( $message, $errFile, $errLine, $ex, $stackTrace );
 
                 global $_php_error_is_ini_enabled;
@@ -2348,7 +2368,6 @@
 
                                                 // they are just checking, so don't error
                                                 if (
-                                                        $function === 'class_exists' ||
                                                         $function === 'interface_exists'
                                                 ) {
                                                     $error =false;
@@ -2365,7 +2384,7 @@
                                         }
 
                                         if ( $error ) {
-                                            $self->reportClassNotFound( $className );
+                                            $self->classNotFoundException = new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
                                         }
                                     }
                                 }
