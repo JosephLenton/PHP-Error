@@ -323,7 +323,7 @@
                     'T_OBJECT_OPERATOR'             => "'->'",
                     'T_OLD_FUNCTION'                => 'old_function',
                     'T_OPEN_TAG'                    => "'<?php' or '<?'",
-                    'T_OPEN_TAG_WITH_ECHO'          => "'<?='",
+                    'T_OPEN_TAG_WITH_ECHO'          => "'<?php echo '",
                     'T_OR_EQUAL'                    => "'|='",
                     'T_PAAMAYIM_NEKUDOTAYIM'        => "'::'",
                     'T_PLUS_EQUAL'                  => "'+='",
@@ -2670,7 +2670,7 @@
                                      * Check headers for error.
                                      */
                                     if ( ! isAjaxError && state >= 2 ) {
-                                        var header = inner.getResponseHeader( '<?= ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY ?>' );
+                                        var header = inner.getResponseHeader( '<?php echo ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY ?>' );
 
                                         if ( header !== null ) {
                                             self.__.isAjaxError = true;
@@ -2823,21 +2823,21 @@
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
-                                    <div id="error-back"><?= $backgroundText ?></div>
+                                    <div id="error-back"><?php echo $backgroundText ?></div>
                                 </div>
                             <?php } ?>
-                            <h2 id="error-file-root"><?= $serverName ?> | <?= $applicationRoot ?></h2>
+                            <h2 id="error-file-root"><?php echo $serverName ?> | <?php echo $applicationRoot ?></h2>
                             <h2 id="ajax-info">
                                 <span id="ajax-tab" class="ajax-button">AJAX PAUSED</span>
 
-                                <span class="ajax-url"><?= $serverName ?><?= $requestUrl ?></span>
+                                <span class="ajax-url"><?php echo $serverName ?><?php echo $requestUrl ?></span>
                                 <span class="ajax-buttons">
                                     <a href="#" id="ajax-close" class="ajax-button">X</a>
                                     <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
                                 </span>
                             </h2>
-                            <h1 id="error-title"><?= $message ?></h1>
-                            <h2 id="error-file" class="<?= $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?= $errLine ?></span> <span id="error-filename" class="<?= $errFileType ?>"><?= $errFile ?></span></h2>
+                            <h1 id="error-title"><?php echo $message ?></h1>
+                            <h2 id="error-file" class="<?php echo $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
                             <?php if ( $fileLinesSets ) { ?>
                                 <div id="error-files">
                                     <?php
@@ -2847,7 +2847,7 @@
                                             $show          = $fileLinesSet->isShown();
                                             $highlightLine = $fileLinesSet->getLine();
                                         ?>
-                                            <div id="<?= $id ?>" class="error-file-lines <?= $show ? 'show' : '' ?>">
+                                            <div id="<?php echo $id ?>" class="error-file-lines <?php echo $show ? 'show' : '' ?>">
                                                 <?php
                                                     foreach ( $fileLines as $lineNum => $origLine ) {
                                                         $line = ltrim($origLine, ' ');
@@ -2860,7 +2860,7 @@
                                                             $line = "&nbsp;$line";
                                                         }
 
-                                                        ?><div <?= $style ?> class="error-file-line <?= ($lineNum === $highlightLine) ? 'highlight' : '' ?>"><?= $line ?></div><?php
+                                                        ?><div <?php echo $style ?> class="error-file-line <?php echo ($lineNum === $highlightLine) ? 'highlight' : '' ?>"><?php echo $line ?></div><?php
                                                     }
                                                 ?>
                                             </div>
