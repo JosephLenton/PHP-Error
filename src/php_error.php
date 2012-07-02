@@ -2081,16 +2081,16 @@
                     $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
                     // load the session, if it's there
-                    if (isset($_COOKIE[session_name()])) {
+                    if (isset($_COOKIE[session_name()]) && empty($_SESSION)) {
                         session_start();
                     }
 
                     $dump = $this->generateDumpHTML(
                             array(
-                                    'post'    => isset($_POST)    ? $_POST    : array(),
-                                    'get'     => isset($_GET)     ? $_GET     : array(),
-                                    'session' => isset($_SESSION) ? $_SESSION : array(),
-                                    'cookies' => isset($_COOKIE)  ? $_COOKIE  : array(),
+                                    'post'    => ( isset($_POST)    ? $_POST    : array() ),
+                                    'get'     => ( isset($_GET)     ? $_GET     : array() ),
+                                    'session' => ( isset($_SESSION) ? $_SESSION : array() ),
+                                    'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() )
                             ),
 
                             getallheaders(),
