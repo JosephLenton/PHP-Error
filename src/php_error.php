@@ -1034,7 +1034,7 @@
                 $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
                 if ( $wordpress ) {
                     // php doesn't like | in constants and privates, so just set it directly : (
-                    $this->defaultErrorReportingOn = E_ERROR | E_WARNING | E_PARSE & ~E_DEPRECATED & ~E_STRICT;
+                    $this->defaultErrorReportingOn = E_ERROR | E_WARNING | E_PARSE | E_USER_DEPRECATED & ~E_DEPRECATED & ~E_STRICT;
                 }
 
                 if ( $options ) {
