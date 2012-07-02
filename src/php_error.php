@@ -961,7 +961,7 @@
 
             private $lastGlobalErrorHandler;
 
-            public $classNotFoundException;
+            private $classNotFoundException;
 
             /**
              * = Options =
