@@ -1,4 +1,4 @@
-<?
+<?php
     require( __DIR__ . '/../src/php_error.php' );
     \php_error\reportErrors();
 
