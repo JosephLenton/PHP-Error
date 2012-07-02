@@ -2275,7 +2275,35 @@
                                         }
                                         spl_autoload_register( $classNotFoundFun );
                                     } else {
-                                        $self->reportClassNotFound( $className );
+                                        // search the stack first, to check if we are running from 'class_exists' before we error
+                                        $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+                                        $error = true;
+
+                                        foreach ( $trace as $row ) {
+                                            if ( isset($row['function']) ) {
+                                                $function = $row['function'];
+
+                                                // they are just checking, so don't error
+                                                if (
+                                                        $function === 'class_exists' ||
+                                                        $function === 'interface_exists'
+                                                ) {
+                                                    $error =false;
+                                                    break;
+                                                // not us, and not the autoloader, so error!
+                                                } else if (
+                                                        $function !== '__autoload' &&
+                                                        $function !== 'spl_autoload_call' &&
+                                                        strpos($function, 'php_error\\') === false
+                                                ) {
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if ( $error ) {
+                                            $self->reportClassNotFound( $className );
+                                        }
                                     }
                                 }
                             };
