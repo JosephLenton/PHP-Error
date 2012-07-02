@@ -3,7 +3,7 @@
     $_SESSION['DKDKDK']='something';
 ?><!DOCTYPE html>
 <?php
-	require( __DIR__ . '/../src/php_error.php' );
+	require( dirname( __FILE__ ) . '/../src/php_error.php' );
 	\php_error\reportErrors();
 ?>
 

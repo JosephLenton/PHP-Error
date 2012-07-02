@@ -258,7 +258,7 @@
                     'T_DEC'                         => '-- (decrement)',
                     'T_DECLARE'                     => 'declare',
                     'T_DEFAULT'                     => 'default',
-                    'T_DIR'                         => '__DIR__',
+                    'T_DIR'                         => 'dirname( __FILE__ )',
                     'T_DIV_EQUAL'                   => "'/='",
                     'T_DNUMBER'                     => 'number',
                     'T_DOLLAR_OPEN_CURLY_BRACES'    => '\'${\'',
