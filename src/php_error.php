@@ -1725,10 +1725,10 @@
                                 }
 
                                 if ( $scalarType !== null ) {
-                                    $message = preg_replace( '/^Argument [0-9]+ /', 'Incorrect type hint ', $message );
+                                    $message = preg_replace( '/^Argument [0-9]+ calling /', 'Incorrect type hinting for ', $message );
                                     $message = preg_replace(
                                             '/ must be an instance of ' . ErrorHandler::REGEX_PHP_IDENTIFIER . '\b.*$/',
-                                            ", ${scalarType} not supported",
+                                            ", ${scalarType} is not supported",
                                             $message
                                     );
 
