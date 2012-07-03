@@ -2286,7 +2286,8 @@
 
                 if ( $_php_error_is_ini_enabled ) {
                     error_reporting( $this->defaultErrorReportingOff );
-                    @ini_restore( 'html_errors', $this->iniHtmlErrors );
+
+                    @ini_restore( 'html_errors' );
                 }
             }
 
@@ -2306,7 +2307,7 @@
 
                     // all errors \o/ !
                     error_reporting( $this->defaultErrorReportingOn );
-                    ini_set( 'html_errors', false );
+                    @ini_set( 'html_errors', false );
 
                     set_error_handler(
                             function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
