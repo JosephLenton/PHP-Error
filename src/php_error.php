@@ -1679,6 +1679,7 @@
                                     (((int) $argumentMathces[1])-1) :
                                     null ;
 
+                            $numHighlighted = 0;
                             $altInfo = ErrorHandler::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg, $numHighlighted );
 
                             if ( $numHighlighted > 0 ) {
