@@ -941,6 +941,42 @@
                 }
             }
 
+            private static function getRequestHeaders() {
+                if ( function_exists('getallheaders') ) {
+                    return getallheaders();
+                } else {
+                    $headers = array();
+                    
+                    foreach ( $_SERVER as $key => $value ) {
+                        if ( strpos($key, 'HTTP_') === 0 ) {
+                            $key = str_replace( " ", "-", ucwords(strtolower( str_replace("_", " ", substr($key, 5)) )) ); 
+                            $headers[ $key ] = $value;
+                        }
+                    }
+
+                    return $headers;
+                }
+            }
+
+            private static function getResponseHeaders() {
+                if ( function_exists('apache_response_headers') ) {
+                    return apache_response_headers();
+                } else {
+                    $headers = array();
+
+                    if ( function_exists('headers_list') ) {
+                        $hList = headers_list();
+
+                        foreach ($hList as $header) {
+                            $header = explode(":", $header);
+                            $headers[ array_shift($header) ] = trim( implode(":", $header) );
+                        }
+                    }
+
+                    return $headers;
+                }
+            }
+
             public static function identifyTypeHTML( $arg, $recurseLevels=1 ) {
                 if ( ! is_array($arg) && !is_object($arg) ) {
                     if ( is_string($arg) ) {
@@ -2145,6 +2181,9 @@
                         session_start();
                     }
 
+                    $request  = ErrorHandler::getRequestHeaders();
+                    $response = ErrorHandler::getResponseHeaders();
+
                     $dump = $this->generateDumpHTML(
                             array(
                                     'post'    => ( isset($_POST)    ? $_POST    : array() ),
@@ -2153,8 +2192,8 @@
                                     'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() )
                             ),
 
-                            getallheaders(),
-                            apache_response_headers(),
+                            $request,
+                            $response,
 
                             $_SERVER
                     );
