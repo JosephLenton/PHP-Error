@@ -3066,7 +3066,7 @@
                     a:hover,
                     a:active {
                         color: #9ae;
-                        text-decoration: undefine;
+                        text-decoration: none;
                     }
                     a:hover {
                         color: #aff;
@@ -3401,7 +3401,7 @@
                         }
                         .error_dump_value {
                             clear: right;
-                            word-break: break-word;
+                            white-space: normal;
                             max-width: 100%;
                         }
                         
