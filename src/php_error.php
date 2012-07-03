@@ -954,7 +954,7 @@
                     } else if ( $recurseLevels > 0 ) {
                         $argArr = array();
 
-                        foreach ($arg as $i => $ag) {
+                        foreach ($arg as $ag) {
                             $argArr[]= ErrorHandler::identifyTypeHTML( $ag, $recurseLevels-1 );
                         }
 
@@ -1104,9 +1104,8 @@
                  * Relative paths might be given for document root,
                  * so we make it explicit.
                  */
-                $dir = false;
                 $dir = @realpath( $this->applicationRoot );
-                if ( $dir === false ) {
+                if ( ! is_string($dir) ) {
                     throw new Exception("Document root not found: " . $this->applicationRoot);
                 } else {
                     $this->applicationRoot =  str_replace( '\\', '/', $dir );
@@ -1696,11 +1695,8 @@
                             strpos($message, 'require(') === 0 ||
                             strpos($message, 'include(') === 0
                     ) {
-                        $type = strpos($message, 'require(') === 0 ?
-                                'require' :
-                                'include' ;
-
                         $endI  = strpos( $message, '):' );
+
                         if ( $endI ) {
                             // include( is the same length
                             $requireLen = strlen('require(');
@@ -1920,11 +1916,8 @@
                     /*
                      * For whitespace padding.
                      */
-                    $lineLen     = 0;
-                    $functionLen = 0;
-                    $fileLen     = 0;
-
-                    ;
+                    $lineLen = 0;
+                    $fileLen = 0;
 
                     // parse the stack trace, and remove the long urls
                     foreach ( $stackTrace as $i => $trace ) {
@@ -1972,15 +1965,13 @@
                             $trace['info'] = $info;
 
                             if ( isset($trace['file']) ) {
-                                $klass = '';
-
                                 list( $type, $file ) = $this->getFolderType( $root, $trace['file'] );
-                                $klass = ErrorHandler::folderTypeToCSS( $type );
 
                                 $trace['file_type'] = $type;
                                 $trace['is_native'] = false;
                             } else {
                                 $file = '[Internal PHP]';
+
                                 $trace['file_type'] = '';
                                 $trace['is_native'] = true;
                             }
