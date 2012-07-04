@@ -2478,7 +2478,11 @@
                                         $classException = null;
 
                                         // search the stack first, to check if we are running from 'class_exists' before we error
-                                        $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+                                        if ( defined('DEBUG_BACKTRACE_IGNORE_ARGS') ) {
+                                            $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+                                        } else {
+                                            $trace = debug_backtrace();
+                                        }
                                         $error = true;
 
                                         foreach ( $trace as $row ) {
