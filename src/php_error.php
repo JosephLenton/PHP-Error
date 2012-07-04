@@ -241,6 +241,8 @@
 
             const REGEX_VARIABLE = '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/';
 
+            const REGEX_MISSING_SEMI_COLON_FOLLOWING_LINE = '/^ *(return|}|if|while|foreach|for|switch)/';
+
             /**
              * The number of lines to take from the file,
              * where the error is reported. This is the number
@@ -1784,29 +1786,48 @@
                     if ( $message === "syntax error, unexpected T_ENCAPSED_AND_WHITESPACE" ) {
                         $message = "syntax error, string is not closed";
                     } else {
-                        $matches = array();
-                        $num = preg_match( '/\bunexpected ([A-Z_]+|\\$end)\b/', $message, $matches );
+                        $semiColonError = false;
+                        if ( strpos($message, 'syntax error,') === 0 && $errLine > 2 ) {
+                            $lines = ErrorHandler::getFileContents( $errFile );
+                            
+                            $line = $lines[$errLine-1];
+                            if ( preg_match( ErrorHandler::REGEX_MISSING_SEMI_COLON_FOLLOWING_LINE, $line ) !== 0 ) {
+                                $content = rtrim( join( "\n", array_slice($lines, 0, $errLine-1) ) );
 
-                        if ( $num > 0 ) {
-                            $match = $matches[0];
-                            $newSymbol = ErrorHandler::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
-
-                            $message = str_replace( $match, "unexpected $newSymbol", $message );
+                                if ( strrpos($content, ';') !== strlen($content)-1 ) {
+                                    $message = "Missing semi-colon";
+                                    $errLine--;
+                                    $srcErrLine = $errLine;
+                                    $semiColonError = true;
+                                }
+                            }
                         }
 
-                        $matches = array();
-                        $num = preg_match( '/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches );
+                        if ( $semiColonError ) {
+                            $matches = array();
+                            $num = preg_match( '/\bunexpected ([A-Z_]+|\\$end)\b/', $message, $matches );
 
-                        if ( $num > 0 ) {
-                            $match = $matches[0];
-                            $newMatch = str_replace( ", expecting ", '', $match );
-                            $symbols = explode( ' or ', $newMatch );
-                            foreach ( $symbols as $i => $sym ) {
-                                $symbols[$i] = ErrorHandler::phpSymbolToDescription( $sym );
+                            if ( $num > 0 ) {
+                                $match = $matches[0];
+                                $newSymbol = ErrorHandler::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
+
+                                $message = str_replace( $match, "unexpected $newSymbol", $message );
                             }
-                            $newMatch = join( ', or ', $symbols );
 
-                            $message = str_replace( $match, ", expecting $newMatch", $message );
+                            $matches = array();
+                            $num = preg_match( '/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches );
+
+                            if ( $num > 0 ) {
+                                $match = $matches[0];
+                                $newMatch = str_replace( ", expecting ", '', $match );
+                                $symbols = explode( ' or ', $newMatch );
+                                foreach ( $symbols as $i => $sym ) {
+                                    $symbols[$i] = ErrorHandler::phpSymbolToDescription( $sym );
+                                }
+                                $newMatch = join( ', or ', $symbols );
+
+                                $message = str_replace( $match, ", expecting $newMatch", $message );
+                            }
                         }
                     }
                 /**
