@@ -222,9 +222,22 @@
              *  {closure}()
              *  blah::foo()
              *  foo()
+             * 
+             * It is:
+             *      a closure
+             *      or a method or function
+             *      followed by parenthesis '()'
+             * 
+             *      a function is 'namespace function'
+             *      a method is 'namespace class::function', or 'namespace class->function'
+             *      the whole namespace is optional
+             *          namespace is made up of an '\' and then repeating 'namespace\'
+             *          both the first slash, and the repeating 'namespace\', are optional
+             * 
+             * 'END' matches it at the end of a string, the other one does not.
              */
-            const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
-            const REGEX_METHOD_OR_FUNCTION     = '/(\\{closure\\})|(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/' ;
+            const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(((\\\\)?(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*\\\\)*)?\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
+            const REGEX_METHOD_OR_FUNCTION     = '/(\\{closure\\})|(((\\\\)?(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*\\\\)*)?\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)/';
 
             const REGEX_VARIABLE = '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/';
 
