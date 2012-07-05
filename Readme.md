@@ -15,6 +15,8 @@ If the server errors during an ajax request, then the request is paused, and the
 
 This requires no changes to your JavaScript, and works with existing JS libraries such as jQuery.
 
+Check out the [project homepage](http://phperror.net) for a live demo.
+
 Features
 --------
  * trivial to use, it's just one file
@@ -26,8 +28,6 @@ Features
  * fixes some error messages which are just plain wrong
  * syntax highlighting
  * looks pretty!
-
-There is an online demo [here](http://phperror.net)
 
 Getting Started
 ---------------
