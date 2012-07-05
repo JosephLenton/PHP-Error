@@ -3262,34 +3262,42 @@
 
                         overflow: hidden;
                     }
+                        /**
+                         * Two transitions are used to get them to smoothly fade,
+                         * in both directions.
+                         *
+                         * The second keeps it on screen for long enough for the
+                         * fade to occur, and then does the margin transtion to move
+                         * it out.
+                         */
                         .error-file-lines {
                             display: inline-block;
                             opacity: 0;
-                            visibility: hidden;
 
-                            float: right;
+                            float: left;
                             clear: none;
 
                             width: 100%;
-                            overflow: hidden;
                             margin-right: -100%;
 
-                            -webkit-transition: opacity 120ms linear;
-                               -moz-transition: opacity 120ms linear;
-                                -ms-transition: opacity 120ms linear;
-                                 -o-transition: opacity 120ms linear;
-                                    transition: opacity 120ms linear;
+                            -webkit-transition: opacity 300ms;
+                               -moz-transition: opacity 300ms;
+                                -ms-transition: opacity 300ms;
+                                 -o-transition: opacity 300ms;
+                                    transition: opacity 300ms;
                         }
                         .error-file-lines.show {
                             height: auto;
 
-                            float: left;
-                            visibility: visible;
                             opacity: 1;
-                            z-index: 1;
 
-                            overflow: visible;
                             margin: 0;
+
+                            -webkit-transition: opacity 300ms, margin 100ms linear 300ms;
+                               -moz-transition: opacity 300ms, margin 100ms linear 300ms;
+                                -ms-transition: opacity 300ms, margin 100ms linear 300ms;
+                                 -o-transition: opacity 300ms, margin 100ms linear 300ms;
+                                    transition: opacity 300ms, margin 100ms linear 300ms;
                         }
                             .error-file-line {
                                 line-height: 21px;
