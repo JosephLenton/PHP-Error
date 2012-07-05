@@ -156,11 +156,16 @@
 
             $_php_error_is_ini_enabled = false;
 
-            // check both 'disable' and 'disabled' incase it's mispelt
+            /*
+             * check both 'disable' and 'disabled' incase it's mispelt
+             * check that display errors is on
+             * and ensure we are *not* a command line script.
+             */
             $_php_error_is_ini_enabled = 
                     ! @get_cfg_var( 'php_error.force_disabled' ) &&
                     ! @get_cfg_var( 'php_error.force_disable'  ) &&
-                      @ini_get('display_errors') === '1'
+                      @ini_get('display_errors') === '1'         &&
+                       PHP_SAPI !== 'cli'
             ;
         }
 
