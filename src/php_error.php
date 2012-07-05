@@ -2417,101 +2417,54 @@
                             $autoloaderFuns = ErrorHandler::$SAFE_AUTOLOADER_FUNCTIONS;
 
                             /*
-                             * When called, the callback will move it's self to the back of the list,
-                             * if it's not there already.
+                             * When this is called, the key point is that we don't error!
+                             *
+                             * Instead we record that an error has occurred,
+                             * if we believe one has, and then let PHP error as normal.
+                             * The stack trace we record is then used later.
+                             *
+                             * This is done for two reasons:
+                             *  - functions like 'class_exists' will run the autoloader, and we shouldn't error on them
+                             *  - on PHP 5.3.0, the class loader registered functions does *not* return closure objects, so we can't do anything clever.
                              * 
-                             * This is to avoid conflicting with other class loaders.
+                             * So we watch, but don't touch.
                              */
-                            $classNotFoundFun = null;
-                            $classNotFoundFun = function($className) use ( $self, &$classNotFoundFun, &$classException, &$autoloaderFuns ) {
+                            spl_autoload_register( function($className) use ( $self, &$classException, &$autoloaderFuns ) {
                                 if ( $self->isOn() ) {
-                                    $funs = spl_autoload_functions();
+                                    $classException = null;
 
-                                    if ( $funs[count($funs)-1] !== $classNotFoundFun ) {
-                                        /*
-                                         * You cannot change the registered functions when your
-                                         * in the middle.
-                                         * 
-                                         * So we re-arrange them dynamically.
-                                         */
+                                    // search the stack first, to check if we are running from 'class_exists' before we error
+                                    if ( defined('DEBUG_BACKTRACE_IGNORE_ARGS') ) {
+                                        $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+                                    } else {
+                                        $trace = debug_backtrace();
+                                    }
+                                    $error = true;
 
-                                        /*
-                                         * Remove everything before us.
-                                         */
+                                    foreach ( $trace as $row ) {
+                                        if ( isset($row['function']) ) {
+                                            $function = $row['function'];
 
-                                        $ourIndex = 0;
-                                        foreach ( $funs as $i => $fun ) {
-                                            spl_autoload_unregister( $fun );
-
-                                            if ( $fun === $classNotFoundFun ) {
-                                                $ourIndex = $i;
+                                            // they are just checking, so don't error
+                                            if ( in_array($function, $autoloaderFuns, true) ) {
+                                                $error = false;
+                                                break;
+                                            // not us, and not the autoloader, so error!
+                                            } else if (
+                                                    $function !== '__autoload' &&
+                                                    $function !== 'spl_autoload_call' &&
+                                                    strpos($function, 'php_error\\') === false
+                                            ) {
                                                 break;
                                             }
                                         }
+                                    }
 
-                                        /*
-                                         * Put us to the end, and re-call.
-                                         */
-
-                                        spl_autoload_register( $classNotFoundFun );
-
-                                        spl_autoload_call( $className );
-
-                                        /*
-                                         * Then remove all class loaders,
-                                         * and re-set them up to be how they were,
-                                         * but with us moved to the end.
-                                         */
-                                        spl_autoload_unregister( $classNotFoundFun );
-
-                                        for ( $i = $ourIndex+1; $i < count($funs); $i++ ) {
-                                            spl_autoload_unregister( $funs[$i] );
-                                        }
-
-                                        foreach ( $funs as $fun ) {
-                                            if ( $fun !== $classNotFoundFun ) {
-                                                spl_autoload_register( $fun );
-                                            }
-                                        }
-                                        spl_autoload_register( $classNotFoundFun );
-                                    } else {
-                                        $classException = null;
-
-                                        // search the stack first, to check if we are running from 'class_exists' before we error
-                                        if ( defined('DEBUG_BACKTRACE_IGNORE_ARGS') ) {
-                                            $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
-                                        } else {
-                                            $trace = debug_backtrace();
-                                        }
-                                        $error = true;
-
-                                        foreach ( $trace as $row ) {
-                                            if ( isset($row['function']) ) {
-                                                $function = $row['function'];
-
-                                                // they are just checking, so don't error
-                                                if ( in_array($function, $autoloaderFuns, true) ) {
-                                                    $error = false;
-                                                    break;
-                                                // not us, and not the autoloader, so error!
-                                                } else if (
-                                                        $function !== '__autoload' &&
-                                                        $function !== 'spl_autoload_call' &&
-                                                        strpos($function, 'php_error\\') === false
-                                                ) {
-                                                    break;
-                                                }
-                                            }
-                                        }
-
-                                        if ( $error ) {
-                                            $classException = new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
-                                        }
+                                    if ( $error ) {
+                                        $classException = new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
                                     }
                                 }
-                            };
-
-                            spl_autoload_register( $classNotFoundFun );
+                            } );
                         }
 
                         register_shutdown_function( function() use ( $self ) {
