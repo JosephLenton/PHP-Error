@@ -1173,6 +1173,7 @@
 
                 $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
+                $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
 
                 $this->classNotFoundException   = null;
 
@@ -2925,6 +2926,11 @@
                                             $fileLines     = $fileLinesSet->getLines();
                                             $show          = $fileLinesSet->isShown();
                                             $highlightLine = $fileLinesSet->getLine();
+                                            
+                                            // calculate last line number length
+                                            end($fileLines);
+                                            $maxLineNumber = key($fileLines);
+                                            $lineDecimals  = strlen($maxLineNumber);
                                         ?>
                                             <div id="<?php echo $id ?>" class="error-file-lines <?php echo $show ? 'show' : '' ?>">
                                                 <?php
@@ -2939,7 +2945,17 @@
                                                             $line = "&nbsp;$line";
                                                         }
 
-                                                        ?><div <?php echo $style ?> class="error-file-line <?php echo ($lineNum === $highlightLine) ? 'highlight' : '' ?>"><?php echo $line ?></div><?php
+                                                        if ($this->displayLineNumber) {
+                                                        	$lineNumLabel = str_replace(' ', '&nbsp;', sprintf("%{$lineDecimals}d", $lineNum));
+                                                        } else {
+                                                        	$lineNumLabel = '';
+                                                        }
+
+                                                        ?><div <?php echo $style ?> class="error-file-line <?php echo ($lineNum === $highlightLine) ? 'highlight' : '' ?>">
+                                                        	<span class="error-file-line-number"><?php echo $lineNumLabel ?></span>
+                                                        	<span class="error-file-line-content"><?php echo $line ?></span>
+                                                        </div>
+                                                        <?php
                                                     }
                                                 ?>
                                             </div>
