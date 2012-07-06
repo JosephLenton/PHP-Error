@@ -35,7 +35,7 @@ Getting Started
  * [Download](http://phperror.net/download/php_error.php), it's just one file.
  * Place it in your project.
  * import php_error.php
- * call \better_error_messages\reportErrors()
+ * call \php_error\reportErrors()
 
 ```php
     <?php
