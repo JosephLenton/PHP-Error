@@ -2883,6 +2883,7 @@
                 $serverName      = $this->serverName;
                 $backgroundText  = $this->backgroundText;
                 $requestUrl      = str_replace( $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
+                $displayLineNumber = $this->displayLineNumber;
 
                 $this->displayHTML(
                         // pre, in the head
@@ -2899,6 +2900,7 @@
                                 $backgroundText, $serverName, $applicationRoot,
                                 $message, $errLine, $errFile, $errFileType, $stackTrace,
                                 &$fileLinesSets, $numFileLines,
+                                $displayLineNumber,
                                 $dumpInfo
                         ) {
                             if ( $backgroundText ) { ?>
@@ -2945,15 +2947,15 @@
                                                             $line = "&nbsp;$line";
                                                         }
 
-                                                        if ($this->displayLineNumber) {
-                                                        	$lineNumLabel = str_replace(' ', '&nbsp;', sprintf("%{$lineDecimals}d", $lineNum));
+                                                        if ($displayLineNumber) {
+                                                            $lineNumLabel = str_replace(' ', '&nbsp;', sprintf("%{$lineDecimals}d", $lineNum));
                                                         } else {
-                                                        	$lineNumLabel = '';
+                                                            $lineNumLabel = '';
                                                         }
 
                                                         ?><div <?php echo $style ?> class="error-file-line <?php echo ($lineNum === $highlightLine) ? 'highlight' : '' ?>">
-                                                        	<span class="error-file-line-number"><?php echo $lineNumLabel ?></span>
-                                                        	<span class="error-file-line-content"><?php echo $line ?></span>
+                                                            <span class="error-file-line-number"><?php echo $lineNumLabel ?></span>
+                                                            <span class="error-file-line-content"><?php echo $line ?></span>
                                                         </div>
                                                         <?php
                                                     }
