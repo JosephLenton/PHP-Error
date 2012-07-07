@@ -1,6 +1,6 @@
 <?php
 	require( dirname(__FILE__) . '/../src/php_error.php' );
-	\php_error\reportErrors();
+	\php_error\reportErrors( array('display_line_numbers' => true) );
 
 	function a() {
 		b();

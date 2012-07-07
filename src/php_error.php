@@ -3281,7 +3281,7 @@
                         width: 100%;
                         -moz-box-sizing: border-box;
                         box-sizing: border-box;
-                        padding-left: 148px;
+                        padding-left: 166px;
 
                         overflow: hidden;
                     }
@@ -3341,7 +3341,18 @@
                                 display: inline-block;
                                 float: left;
                                 clear: both;
+
+                                position: relative;
                             }
+                                .error-file-line-number {
+                                    position: absolute;
+                                    top: 0;
+                                    right: 100%;
+                                    margin-right: 12px;
+                                    display: block;
+                                    text-indent: 0;
+                                    text-align: left;
+                                }
                     <?php
                     /*
                      * Stack Trace
