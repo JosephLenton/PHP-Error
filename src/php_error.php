@@ -90,7 +90,7 @@
 
     namespace php_error;
 
-    use \php_error\ErrorToExceptionException,
+    use \php_error\ErrorException,
         \php_error\FileLinesSet,
         \php_error\ErrorHandler,
 
@@ -1998,8 +1998,6 @@
                     // parse the stack trace, and remove the long urls
                     foreach ( $stackTrace as $i => $trace ) {
                         if ( $trace ) {
-                            $trace['info'] = '';
-
                             if ( isset($trace['line'] ) ) {
                                 $lineLen = max( $lineLen, strlen($trace['line']) );
                             } else {
@@ -2008,21 +2006,13 @@
 
                             $info = '';
 
-                            if ( $i === 0 ) {
-                                if ( $altInfo !== null ) {
-                                    $info = $altInfo;
-                                } else if ( isset($trace['info']) && $trace['info'] !== '' ) {
-                                    $info = ErrorHandler::syntaxHighlight( $trace['info'] );
-                                } else { 
-                                    $contents = $this->getFileContents( $trace['file'] );
-
-                                    if ( $contents ) {
-                                        $info = ErrorHandler::syntaxHighlight(
-                                                trim( $contents[$trace['line']-1] )
-                                        );
-                                    }
-                                }
-                            } else {
+                            if ( $i === 0 && $altInfo !== null ) {
+                                $info = $altInfo;
+                            } else if (
+                                isset($trace['class']) ||
+                                isset($trace['type']) ||
+                                isset($trace['function'])
+                            ) {
                                 $args = array();
                                 if ( isset($trace['args']) ) {
                                     foreach ( $trace['args'] as $arg ) {
@@ -2036,7 +2026,17 @@
                                         isset($trace['function'])   ? $trace['function']    : null,
                                         $args
                                 );
-                            }
+                            } else if ( isset($trace['info']) && $trace['info'] !== '' ) {
+                                $info = ErrorHandler::syntaxHighlight( $trace['info'] );
+                            } else if ( isset($trace['file']) && !isset($trace['info']) ) {
+                                $contents = $this->getFileContents( $trace['file'] );
+
+                                if ( $contents ) {
+                                    $info = ErrorHandler::syntaxHighlight(
+                                            trim( $contents[$trace['line']-1] )
+                                    );
+                                }
+                            } 
 
                             $trace['info'] = $info;
 
@@ -2111,9 +2111,23 @@
                             }
 
                             if ( $highlightI === $i ) {
-                                $cssClass .= 'highlight';
+                                $cssClass .= ' highlight';
                             } else if ( $highlightI > $i ) {
-                                $cssClass .= 'pre-highlight';
+                                $cssClass .= ' pre-highlight';
+                            }
+
+                            if (
+                                    $i !== 0 &&
+                                    isset($trace['exception']) &&
+                                    $trace['exception']
+                            ) {
+                                $ex = $trace['exception'];
+
+                                $exHtml = '<tr class="error-stack-trace-exception"><td>' .
+                                            htmlspecialchars( $ex->getMessage() ) .
+                                        '</td></tr>';
+                            } else {
+                                $exHtml = '';
                             }
 
                             $data = '';
@@ -2121,7 +2135,7 @@
                                 $data = 'data-file-lines-id="' . $trace['file-lines-id'] . '"';
                             }
 
-                            $stackTrace[$i] = "<tr class='error-stack-trace-line $cssClass' $data>$stackStr</tr>";
+                            $stackTrace[$i] = "$exHtml<tr class='error-stack-trace-line $cssClass' $data>$stackStr</tr>";
                         }
                     }
 
@@ -2131,7 +2145,7 @@
                 }
             }
 
-            private function logError( $message, $file, $line, $ex=null, $stack=null ) {
+            private function logError( $message, $file, $line, $ex=null ) {
                 if ( $ex ) {
                     $trace = $ex->getTraceAsString();
                     $parts = explode( "\n", $trace );
@@ -2151,7 +2165,7 @@
              * so you will get a full stack trace.
              */
             public function reportClassNotFound( $className ) {
-                throw new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
+                throw new ErrorException( "Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__ );
             }
 
             /**
@@ -2163,7 +2177,6 @@
                         $ex->getMessage(),
                         $ex->getLine(),
                         $ex->getFile(),
-                        $ex->getTrace(),
                         $ex
                 );
             }
@@ -2179,9 +2192,9 @@
              * even when it's disabled with ini. It just does nothing
              * more than that.
              */
-            public function reportError( $code, $message, $errLine, $errFile, $stackTrace=null, $ex=null ) {
+            public function reportError( $code, $message, $errLine, $errFile, $ex=null ) {
                 if (
-                        $stackTrace === null &&
+                        $ex === null &&
                         $code === 1 &&
                         strpos($message, "Class ") === 0 &&
                         strpos($message, "not found") !== false &&
@@ -2196,14 +2209,69 @@
                     $stackTrace = $ex->getTrace();
                 }
 
-                $this->logError( $message, $errFile, $errLine, $ex, $stackTrace );
+                $this->logError( $message, $errFile, $errLine, $ex );
 
                 global $_php_error_is_ini_enabled;
                 if ( $_php_error_is_ini_enabled ) {
                     $root = $this->applicationRoot;
 
+                    if ( $ex !== null ) {
+                        $next = $ex;
+                        $stackTrace = array();
+                        $skipStacks = 0;
+
+                        for (
+                                $next = $ex;
+                                $next !== null;
+                                $next = $next->getPrevious()
+                        ) {
+                            $ex = $next;
+
+                            $stack = $ex->getTrace();
+                            $file  = $ex->getFile();
+                            $line  = $ex->getLine();
+
+                            //if ( count($stackTrace) > 0 ) {
+                                $stack = array_slice( $stack, 0, count($stack)-count($stackTrace) + 1 );
+                            //}
+
+                            if ( count($stack) > 0 && (
+                                !isset($stack[0]['file']) ||
+                                !isset($stack[0]['line']) ||
+                                $stack[0]['file'] !== $file ||
+                                $stack[0]['line'] !== $line
+                            ) ) {
+                                array_unshift( $stack, array(
+                                        'file' => $file,
+                                        'line' => $line
+                                ) );
+                            }
+
+                            $stackTrace = array_merge( $stack, $stackTrace );
+                            if ( count($stackTrace) > 0 ) {
+                                $stackTrace[0]['exception'] = $ex;
+                            }
+                        }
+
+                        $message = $ex->getMessage();
+                        $errFile = $ex->getFile();
+                        $errLine = $ex->getLine();
+
+                        $code = method_exists($ex, 'getSeverity') ?
+                                $ex->getSeverity() :
+                                $ex->getCode()     ;
+                    }
+
                     list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
-                            $this->improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, $stackTrace );
+                            $this->improveErrorMessage(
+                                    $ex,
+                                    $code,
+                                    $message,
+                                    $errLine,
+                                    $errFile,
+                                    $root,
+                                    $stackTrace
+                            );
 
                     $errFile = $srcErrFile;
                     $errLine = $srcErrLine;
@@ -2398,7 +2466,7 @@
                                      * When using an @, the error reporting drops to 0.
                                      */
                                     if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
-                                        $ex = new ErrorToExceptionException( $code, $message, $file, $line, $context );
+                                        $ex = new ErrorException( $message, $code, $code, $file, $line );
 
                                         $self->reportException( $ex );
                                     }
@@ -2467,7 +2535,7 @@
                                     }
 
                                     if ( $error ) {
-                                        $classException = new ErrorToExceptionException( E_ERROR, "Class '$className' not found", __FILE__, __LINE__ );
+                                        $classException = new ErrorException( "Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__ );
                                     }
                                 }
                             } );
@@ -3367,8 +3435,18 @@
                         line-height: 28px;
                         cursor: pointer;
                     }
+                        .error-stack-trace-exception {
+                            color: #b33;
+                        }
+                            .error-stack-trace-exception > td {
+                                padding-top: 18px;
+                            }
                         .error-stack-trace-line {
                             float: left;
+                        }
+                        .error-stack-trace-line.is-exception {
+                            margin-top: 18px;
+                            border-top: 1px solid #422;
                         }
                             .error-stack-trace-line:first-of-type > td:first-of-type {
                                 border-top-left-radius: 2px;
@@ -3629,15 +3707,19 @@
                 }
             }
         }
-
+         
         /**
+         * This is a carbon copy of \ErrorException.
+         * However that is only supported in PHP 5.1 and above,
+         * so this allows PHP Error to work in PHP 5.0.
+         *
          * A thin class that wraps up an error, into an exception.
          */
-        class ErrorToExceptionException extends Exception
+        class ErrorException extends Exception
         {
-            public function __construct( $code, $message, $file, $line )
+            public function __construct( $message, $code, $severity, $file, $line )
             {
-                parent::__construct( $message, $code );
+                parent::__construct( $message, $code, null );
 
                 $this->file = $file;
                 $this->line = $line;
