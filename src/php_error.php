@@ -2008,10 +2008,16 @@
 
                             if ( $i === 0 && $altInfo !== null ) {
                                 $info = $altInfo;
+                            /*
+                             * Skip for the first iteration,
+                             * as it's usually magical PHP calls.
+                             */
                             } else if (
-                                isset($trace['class']) ||
-                                isset($trace['type']) ||
-                                isset($trace['function'])
+                                $i > 0 && (
+                                        isset($trace['class']) ||
+                                        isset($trace['type']) ||
+                                        isset($trace['function'])
+                                )
                             ) {
                                 $args = array();
                                 if ( isset($trace['args']) ) {
