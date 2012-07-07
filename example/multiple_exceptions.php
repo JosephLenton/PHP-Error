@@ -19,6 +19,18 @@
     }
 
     function d() {
+        try {
+            e();
+        } catch ( Exception $ex ) {
+            throw new Exception( "thrown exception", 0, $ex );
+        }
+    }
+
+    function e() {
+        f();
+    }
+
+    function f() {
         throw new Exception( 'blah' );
     }
 

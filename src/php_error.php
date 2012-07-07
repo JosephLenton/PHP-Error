@@ -2124,7 +2124,9 @@
                                 $ex = $trace['exception'];
 
                                 $exHtml = '<tr class="error-stack-trace-exception"><td>' .
+                                            'exception &quot;' .
                                             htmlspecialchars( $ex->getMessage() ) .
+                                            '&quot;' .
                                         '</td></tr>';
                             } else {
                                 $exHtml = '';
@@ -2215,52 +2217,8 @@
                 if ( $_php_error_is_ini_enabled ) {
                     $root = $this->applicationRoot;
 
-                    if ( $ex !== null ) {
-                        $next = $ex;
-                        $stackTrace = array();
-                        $skipStacks = 0;
-
-                        for (
-                                $next = $ex;
-                                $next !== null;
-                                $next = $next->getPrevious()
-                        ) {
-                            $ex = $next;
-
-                            $stack = $ex->getTrace();
-                            $file  = $ex->getFile();
-                            $line  = $ex->getLine();
-
-                            //if ( count($stackTrace) > 0 ) {
-                                $stack = array_slice( $stack, 0, count($stack)-count($stackTrace) + 1 );
-                            //}
-
-                            if ( count($stack) > 0 && (
-                                !isset($stack[0]['file']) ||
-                                !isset($stack[0]['line']) ||
-                                $stack[0]['file'] !== $file ||
-                                $stack[0]['line'] !== $line
-                            ) ) {
-                                array_unshift( $stack, array(
-                                        'file' => $file,
-                                        'line' => $line
-                                ) );
-                            }
-
-                            $stackTrace = array_merge( $stack, $stackTrace );
-                            if ( count($stackTrace) > 0 ) {
-                                $stackTrace[0]['exception'] = $ex;
-                            }
-                        }
-
-                        $message = $ex->getMessage();
-                        $errFile = $ex->getFile();
-                        $errLine = $ex->getLine();
-
-                        $code = method_exists($ex, 'getSeverity') ?
-                                $ex->getSeverity() :
-                                $ex->getCode()     ;
-                    }
+                    list( $ex, $stackTrace, $code, $errFile, $errLine ) =
+                            $this->getStackTrace( $ex, $code, $errFile, $errLine );
 
                     list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
                             $this->improveErrorMessage(
@@ -2311,6 +2269,62 @@
                     $this->turnOff();
                     exit(0);
                 }
+            }
+
+            private function getStackTrace( $ex, $code, $errFile, $errLine ) {
+                $stackTrace = null;
+
+                if ( $ex !== null ) {
+                    $next = $ex;
+                    $stackTrace = array();
+                    $skipStacks = 0;
+
+                    for (
+                            $next = $ex;
+                            $next !== null;
+                            $next = $next->getPrevious()
+                    ) {
+                        $ex = $next;
+
+                        $stack = $ex->getTrace();
+                        $file  = $ex->getFile();
+                        $line  = $ex->getLine();
+
+                        if ( $stackTrace !== null && count($stackTrace) > 0 ) {
+                            $stack = array_slice( $stack, 0, count($stack)-count($stackTrace) + 1 );
+                        }
+
+                        if ( count($stack) > 0 && (
+                            !isset($stack[0]['file']) ||
+                            !isset($stack[0]['line']) ||
+                            $stack[0]['file'] !== $file ||
+                            $stack[0]['line'] !== $line
+                        ) ) {
+                            array_unshift( $stack, array(
+                                    'file' => $file,
+                                    'line' => $line
+                            ) );
+                        }
+
+                        $stackTrace = ( $stackTrace !== null ) ?
+                                array_merge( $stack, $stackTrace ) :
+                                $stack ;
+
+                        if ( count($stackTrace) > 0 ) {
+                            $stackTrace[0]['exception'] = $ex;
+                        }
+                    }
+
+                    $message = $ex->getMessage();
+                    $errFile = $ex->getFile();
+                    $errLine = $ex->getLine();
+
+                    $code = method_exists($ex, 'getSeverity') ?
+                            $ex->getSeverity() :
+                            $ex->getCode()     ;
+                }
+
+                return array( $ex, $stackTrace, $code, $errFile, $errLine );
             }
 
             private function generateDumpHTML( $arrays, $request, $response, $server ) {
@@ -3290,6 +3304,10 @@
                             #ajax-close:hover {
                                 background: #aa4040;
                             }
+
+                    #error-title {
+                        white-space: pre-wrap;
+                    }
 
                     <?php
                      /*
