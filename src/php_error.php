@@ -521,6 +521,47 @@
             );
 
             /**
+             * When returning values, if a mime type is set,
+             * then PHP Error should only output if the mime type
+             * is one of these.
+             */
+            private static $ALLOWED_RETURN_MIME_TYPES = array(
+                    'text/html',
+                    'application/xhtml+xml'
+            );
+            
+            /**
+             * This attempts to state if this is *not* a PHP request,
+             * but it cannot say if it *is* a PHP request. It achieves
+             * this by looking for a mime type.
+             *
+             * For example if the mime type is JavaScript, then we
+             * know it's not PHP. However there is no "yes, this is
+             * definitely a normal HTML response" flag we can check.
+             */
+            private static function isNonPHPRequest() {
+                /*
+                 * Check if we are a mime type that isn't allowed.
+                 *
+                 * Anything other than 'text/html' or similar will cause
+                 * this to turn off.
+                 */
+                $response = ErrorHandler::getResponseHeaders();
+
+                foreach ( $response as $key => $value ) {
+                    if ( strtolower($key) === 'content-type' ) {
+                        if ( ! in_array($value, ErrorHandler::$ALLOWED_RETURN_MIME_TYPES) ) {
+                            return true;
+                        }
+
+                        break;
+                    }
+                }
+
+                return false;
+            }
+
+            /**
              * Looks up a description for the symbol given,
              * and if found, it is returned.
              * 
@@ -979,22 +1020,26 @@
             }
 
             private static function getResponseHeaders() {
-                if ( function_exists('apache_response_headers') ) {
-                    return apache_response_headers();
-                } else {
-                    $headers = array();
+                $headers = function_exists('apache_response_headers') ?
+                        apache_response_headers() :
+                        array() ;
 
-                    if ( function_exists('headers_list') ) {
-                        $hList = headers_list();
+                /*
+                 * Merge the headers_list into apache_response_headers.
+                 * 
+                 * This is because sometimes things are in one, which are
+                 * not present in the other.
+                 */
+                if ( function_exists('headers_list') ) {
+                    $hList = headers_list();
 
-                        foreach ($hList as $header) {
-                            $header = explode(":", $header);
-                            $headers[ array_shift($header) ] = trim( implode(":", $header) );
-                        }
+                    foreach ($hList as $header) {
+                        $header = explode(":", $header);
+                        $headers[ array_shift($header) ] = trim( implode(":", $header) );
                     }
-
-                    return $headers;
                 }
+
+                return $headers;
             }
 
             public static function identifyTypeHTML( $arg, $recurseLevels=1 ) {
@@ -1370,7 +1415,11 @@
                 global $_php_error_is_ini_enabled;
 
                 if ( $_php_error_is_ini_enabled ) {
-                    if ( !$this->isAjax && $this->catchAjaxErrors ) {
+                    if ( 
+                            !$this->isAjax &&
+                             $this->catchAjaxErrors &&
+                            !ErrorHandler::isNonPHPRequest()
+                    ) {
                         $content  = ob_get_contents();
                         $handlers = ob_list_handlers();
 
@@ -2219,8 +2268,20 @@
 
                 $this->logError( $message, $errFile, $errLine, $ex );
 
+                /**
+                 * It runs if:
+                 *  - it is globally enabled
+                 *  - this error handler is enabled
+                 *  - we believe it is a regular html request, or ajax
+                 */
                 global $_php_error_is_ini_enabled;
-                if ( $_php_error_is_ini_enabled ) {
+                if (
+                        $_php_error_is_ini_enabled &&
+                        $this->isOn() && (
+                                $this->isAjax ||
+                                !ErrorHandler::isNonPHPRequest()
+                        )
+                ) {
                     $root = $this->applicationRoot;
 
                     list( $ex, $stackTrace, $code, $errFile, $errLine ) =
