@@ -1220,6 +1220,8 @@
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
                 $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
 
+                $this->htmlOnly = ErrorHandler::optionsPop( $options, 'html_only', true );
+
                 $this->classNotFoundException   = null;
 
                 $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
@@ -1418,7 +1420,7 @@
                     if ( 
                             !$this->isAjax &&
                              $this->catchAjaxErrors &&
-                            !ErrorHandler::isNonPHPRequest()
+                            (!$this->htmlOnly || !ErrorHandler::isNonPHPRequest())
                     ) {
                         $content  = ob_get_contents();
                         $handlers = ob_list_handlers();
@@ -2279,6 +2281,7 @@
                         $_php_error_is_ini_enabled &&
                         $this->isOn() && (
                                 $this->isAjax ||
+                                !$this->htmlOnly ||
                                 !ErrorHandler::isNonPHPRequest()
                         )
                 ) {
@@ -3223,6 +3226,9 @@
                     ob_clean();
                 } catch ( Exception $ex ) { /* do nothing */ }
 
+                if (!$this->htmlOnly && ErrorHandler::isNonPHPRequest()) {
+                    header( "Content-Type: text/html" );
+                }
                 header( ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE );
 
                 echo '<!DOCTYPE html>';
