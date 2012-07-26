@@ -1103,6 +1103,9 @@
             private $backgroundText;
             private $numLines;
 
+            private $displayLineNumber;
+            private $htmlOnly;
+
             private $bufferOutput;
             private $isInEndBuffer;
 
@@ -1160,6 +1163,11 @@
              * 
              *  - background_text           The text that appeares in the background. By default this is blank.
              *                              Why? You can replace this with the name of your framework, for extra customization spice.
+             * 
+             *  - html_only                 By default, PHP Error only runs on ajax and HTML pages.
+             *                              If this is false, then it will also run when on non-HTML
+             *                              pages too, such as replying with images of JavaScript
+             *                              from your PHP. Defaults to true.
              * 
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
@@ -1220,7 +1228,7 @@
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
                 $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
 
-                $this->htmlOnly = ErrorHandler::optionsPop( $options, 'html_only', true );
+                $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
 
                 $this->classNotFoundException   = null;
 
