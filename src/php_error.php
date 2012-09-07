@@ -3254,7 +3254,7 @@
                     }
                         body {
                             color: #f0f0f0;
-
+                            background-color: #111;
                             tab-size: 4;
                         }
 
@@ -3296,7 +3296,6 @@
                         margin-top: 0;
                     }
                             .background {
-                                background: #111;
                                 width: 100%;
 
                                 padding: 18px 24px;
