@@ -2436,7 +2436,7 @@
                     }
                 }
 
-                return "<div class='error_dumps'>" .
+                return "<div class='error-dumps'>" .
                             $html .
                             $arrToHtml( 'request', $request, 'dump_request' ) .
                             $arrToHtml( 'response', $response, 'dump_response' ) .
@@ -3068,6 +3068,7 @@
                                     <div id="error-back"><?php echo $backgroundText ?></div>
                                 </div>
                             <?php } ?>
+
                             <h2 id="error-file-root"><?php echo $serverName ?> | <?php echo $applicationRoot ?></h2>
                             <h2 id="ajax-info">
                                 <span id="ajax-tab" class="ajax-button">AJAX PAUSED</span>
@@ -3296,8 +3297,8 @@
                         margin-top: 0;
                     }
                             .background {
-                                background: #111;
                                 width: 100%;
+                                background: #111;
 
                                 padding: 18px 24px;
                                 -moz-box-sizing: border-box;
@@ -3325,7 +3326,7 @@
                                 height: auto;
                                 min-height: 0;
 
-                                overflow: visible;
+                                overflow: hidden;
                             }
 
                     #ajax-info {
@@ -3387,6 +3388,7 @@
                             }
 
                     #error-title {
+                        position: relative;
                         white-space: pre-wrap;
                     }
 
@@ -3399,18 +3401,16 @@
                         right: 0;
                         top: 0;
                         position: absolute;
-                        overflow: hidden;
 
-                        z-index: -1;
-                        width: 100%;
-                        height: 100%;
+                        width : 100%;
+                        height: 0;
                     }
                     #error-back {
                         font-size: 240px;
                         color: #211600;
                         position: absolute;
                         top: 60px;
-                        right: -80px;
+                        right: -40px;
 
                         -webkit-transform: rotate( 24deg );
                            -moz-transform: rotate( 24deg );
@@ -3418,6 +3418,7 @@
                              -o-transform: rotate( 24deg );
                                 transform: rotate( 24deg );
                     }
+
                     <?php
                     /*
                      * Code Snippets at the top
@@ -3425,16 +3426,20 @@
                     ?>
                     #error-file.has_code {
                         margin: 24px 0 0 167px;
+                        position: relative;
                     }
                         #error-linenumber {
                             position: absolute;
                             text-align: right;
-                            left: 0;
+                            right: 101%;
                             width: 178px;
                         }
                     #ajax-info,
                     #error-file-root {
                         color: #666;
+                    }
+                    #error-file-root {
+                        position: relative;
                     }
                     #error-files {
                         line-height: 0;
@@ -3531,6 +3536,8 @@
                         width: 100%;
                     }
                     #error-stack-trace {
+                        position: relative;
+
                         line-height: 28px;
                         cursor: pointer;
                     }
@@ -3592,7 +3599,9 @@
                      * Error Dump Info (post, get, session)
                      */
                     ?>
-                    .error_dumps {
+                    .error-dumps {
+                        position: relative;
+
                         margin-top: 48px;
                         padding-top: 32px;
                         width: 100%;
