@@ -184,9 +184,9 @@
 
             if ( $_php_error_global_handler !== null ) {
                 return $_php_error_global_handler->withoutErrors( $callback );
-            } else {
-                return $callback();
             }
+
+            return $callback();
         }
 
         /**
@@ -570,9 +570,9 @@
             private static function phpSymbolToDescription( $symbol ) {
                 if ( isset(ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol]) ) {
                     return ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol];
-                } else {
-                    return "'$symbol'";
                 }
+
+                return "'$symbol'";
             }
 
             /**
@@ -911,15 +911,15 @@
                     unset( $options[$key] );
 
                     return $val;
-                } else {
-                    $iniAlt = @get_cfg_var( ErrorHandler::PHP_ERROR_INI_PREFIX . '.' . $key );
-
-                    if ( $iniAlt !== false ) {
-                        return $iniAlt;
-                    } else {
-                        return $alt;
-                    }
                 }
+
+					 $iniAlt = @get_cfg_var( ErrorHandler::PHP_ERROR_INI_PREFIX . '.' . $key );
+
+					 if ( $iniAlt !== false ) {
+                    return $iniAlt;
+					 }
+
+                return $alt;
             }
 
             private static function folderTypeToCSS( $type ) {
@@ -929,9 +929,9 @@
                     return 'file-ignore';
                 } else if ( $type === ErrorHandler::FILE_TYPE_APPLICATION ) {
                     return 'file-app';
-                } else {
-                    return 'file-common';
                 }
+
+                return 'file-common';
             }
 
             private static function isFolderType( &$folders, $longest, $file ) {
@@ -1335,9 +1335,9 @@
                     $this->turnOn();
 
                     return $result;
-                } else {
-                    return $callback();
                 }
+
+                return $callback();
             }
             
             /**
@@ -1686,9 +1686,9 @@
                         strlen($root) < strlen($filePath)
                 ) {
                     return substr($filePath, strlen($root)+1 );
-                } else {
-                    return $filePath;
                 }
+
+                return $filePath;
             }
 
             /**
@@ -2207,9 +2207,9 @@
                     }
 
                     return '<table id="error-stack-trace">' . join( "", $stackTrace ) . '</table>';
-                } else {
-                    return null;
                 }
+
+                return null;
             }
 
             private function logError( $message, $file, $line, $ex=null ) {
