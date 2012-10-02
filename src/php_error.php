@@ -3039,11 +3039,27 @@
              * This outputs the error details in HTML.
              */
             private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
-                $applicationRoot = $this->applicationRoot;
-                $serverName      = $this->serverName;
-                $backgroundText  = $this->backgroundText;
-                $requestUrl      = str_replace( $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
+                $applicationRoot   = $this->applicationRoot;
+                $serverName        = $this->serverName;
+                $backgroundText    = $this->backgroundText;
                 $displayLineNumber = $this->displayLineNumber;
+
+                /*
+                 * When a query string is not provided,
+                 * in some versions it's a blank string,
+                 * whilst in others it's not set at all.
+                 */
+                if ( isset($_SERVER['QUERY_STRING']) ) {
+                    $requestUrl = str_replace( $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
+                    $requestUrlLen = strlen( $requestUrl );
+                    
+                    // remove the '?' if it's there (I suspect it isn't always, but don't take my word for it!)
+                    if ( $requestUrlLen > 0 && substr($requestUrl, $requestUrlLen-1) === '?' ) {
+                        $requestUrl = substr( $requestUrl, 0, $requestUrlLen-1 );
+                    }
+                } else {
+                    $requestUrl = $_SERVER['REQUEST_URI'];
+                }
 
                 $this->displayHTML(
                         // pre, in the head
