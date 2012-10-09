@@ -3319,6 +3319,8 @@
                     $head();
                 }
 
+                echo "<link href='http://fonts.googleapis.com/css?family=Droid+Sans+Mono' rel='stylesheet' type='text/css'>";
+
                 ?><style>
                     html, body {
                         margin: 0;
@@ -3355,18 +3357,23 @@
                         color: #aff;
                     }
 
-                    h1,
                     h2,
                     .background {
-                        font: 17px monaco, consolas, monospace;
+                        font-size: 16px;
+                        font-family: inconsolata, 'Droid Sans Mono', "DejaVu Sans Mono", consolas, monospace;
                     }
 
+                    h1,
+                    h2 {
+                        font-family: "Segoe UI", "Segoe WP", "Helvetica Neue", Roboto, "sans-serif";
+                        font-weight: 100;
+                    }
                     h1 {
-                        font-size: 32px;
+                        font-size: 42px;
                         margin-bottom: 0;
                     }
                     h2 {
-                        font-size: 24px;
+                        font-size: 28px;
                         margin-top: 0;
                     }
                             .background {
@@ -3402,6 +3409,10 @@
                                 overflow: hidden;
                             }
 
+                    #ajax-info,
+                    .ajax-button {
+                        font-size: 26px;
+                    }
                     #ajax-info {
                         display: none;
                         position: relative;
@@ -3416,10 +3427,11 @@
                             display: none;
                         }
                     .ajax-button {
-                        padding: 3px 12px;
+                        padding: 2px 12px 5px 12px;
                         margin-top: -3px;
                         border-radius: 3px;
                         color: #bbb;
+                        font-weight: 400;
                     }
                     .ajax-button,
                     .ajax-button:visited,
@@ -3436,8 +3448,9 @@
 
                         background: #000;
                         color: inherit;
-                        border: 3px solid #333;
-                        margin-top: -6px;
+                        border: 1px solid #333;
+                        box-shadow: 0 0 2px #222;
+                        margin-top: -4px;
                     }
                     .ajax-buttons {
                         position: absolute;
@@ -3447,6 +3460,7 @@
                         #ajax-retry {
                             float: right;
                             background: #0E4973;
+
                             margin-right: 12px;
                         }
                             #ajax-retry:hover {
@@ -3498,7 +3512,7 @@
                      */
                     ?>
                     #error-file.has_code {
-                        margin: 24px 0 0 167px;
+                        margin: 16px 0 0 167px;
                         position: relative;
                     }
                         #error-linenumber {
@@ -3519,7 +3533,7 @@
                         font-size: 0;
 
                         position: relative;
-                        padding: 3px 0 24px 0;
+                        padding: 9px 0 36px 0;
 
                         display: inline-block;
 
@@ -3571,6 +3585,7 @@
                                 line-height: 21px;
 
                                 font-size: 16px;
+
                                 color: #ddd;
                                 list-style-type: none;
                                 /* needed for empty lines */
@@ -3705,7 +3720,6 @@
                             clear: both;
                         }
                         .error_dump_header {
-                            font-size: 24px;
                             color: #eb4; 
                             margin: 0;
                             margin-left: -6px;
