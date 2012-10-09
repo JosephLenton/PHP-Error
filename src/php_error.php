@@ -550,7 +550,16 @@
 
                 foreach ( $response as $key => $value ) {
                     if ( strtolower($key) === 'content-type' ) {
-                        if ( ! in_array($value, ErrorHandler::$ALLOWED_RETURN_MIME_TYPES) ) {
+                        $found = true;
+
+                        foreach ( ErrorHandler::$ALLOWED_RETURN_MIME_TYPES as $type ) {
+                            if ( stripos($value, $type) !== false ) {
+                                $found = true;
+                                break;
+                            }
+                        }
+
+                        if ( ! $found ) {
                             return true;
                         }
 
@@ -1106,8 +1115,9 @@
             private $displayLineNumber;
             private $htmlOnly;
 
+            private $isBufferSetup;
+            private $bufferOutputStr;
             private $bufferOutput;
-            private $isInEndBuffer;
 
             private $isAjax;
 
@@ -1248,8 +1258,10 @@
                         isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) &&
                         ( $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest' );
 
-                $this->bufferOutput  = '';
-                $this->isInEndBuffer = false;
+                $this->isBufferSetup = false;
+                $this->bufferOutputStr = '';
+                $this->bufferOutput = false;
+
                 $this->startBuffer();
             }
 
@@ -1365,6 +1377,8 @@
                         } else {
                             $this->endBuffer();
                         }
+                    } else {
+                        $this->endBuffer();
                     }
                 }
             }
@@ -1385,46 +1399,92 @@
             
             /**
              * This is intended to be used closely with 'onShutdown'.
+             * It ensures that output buffering is turned on.
              * 
-             * This ensures that output_buffering is turned on.
+             * Why? The user may output content, and *then* hit an error.
+             * We cannot replace the page if this happens,
+             * because they have already outputted information.
+             * 
+             * So we buffer the page, and then output at the end of the page,
+             * or when an error strikes.
              */
             private function startBuffer() {
                 global $_php_error_is_ini_enabled;
+                
+                if ( $_php_error_is_ini_enabled && !$this->isBufferSetup ) {
+                    $this->isBufferSetup = true;
 
-                if ( $_php_error_is_ini_enabled ) {
                     ini_set( 'implicit_flush', false );
                     ob_implicit_flush( false );
 
                     if ( ! @ini_get('output_buffering') ) {
-                        ini_set( 'output_buffering', 'on' );
+                        @ini_set( 'output_buffering', 'on' );
                     }
 
                     $output = '';
-                    $inEndBuffer = false;
-                    $this->bufferOutput  = &$output;
-                    $this->isInEndBuffer = &$inEndBuffer;
+                    $bufferOutput = true;
 
-                    ob_start( function($string) use (&$output, &$inEndBuffer) {
-                        if ( $inEndBuffer ) {
-                            $output = $string;
+                    $this->bufferOutputStr  = &$output;
+                    $this->bufferOutput = &$bufferOutput;
+
+                    ob_start( function($string) use (&$output, &$bufferOutput) {
+                        if ( $bufferOutput ) {
+                            $output .= $string;
                             return '';
                         } else {
-                            return $string;
+                            $temp = $output . $string;
+                            $output = '';
+                            return $temp;
                         }
+                    });
+
+                    $self = $this;
+                    register_shutdown_function( function() use ( $self ) {
+                        $self->__onShutdown();
                     });
                 }
             }
 
             /**
-             * This expects 'startBuffer' to have been called,
-             * to ensure that 'output buffering' is already turned on.
+             * Turns off buffering, and discards anything buffered
+             * so far.
              * 
-             * This will inject JS into the output, before it is done.
+             * This will return what has been buffered incase you
+             * do want it. However otherwise, it will be lost.
              */
-            private function endBuffer() {
-                global $_php_error_is_ini_enabled;
+            private function discardBuffer() {
+                $str = $this->bufferOutputStr;
 
-                if ( $_php_error_is_ini_enabled ) {
+                $this->bufferOutputStr = '';
+                $this->bufferOutput = false;
+
+                return $str;
+            }
+
+            /**
+             * Flushes the internal buffer,
+             * outputting what is left.
+             * 
+             * @param append Optional, extra content to append onto the output buffer.
+             */
+            private function flushBuffer() {
+                $temp = $this->bufferOutputStr;
+                $this->bufferOutputStr = '';
+
+                return $temp;
+            }
+
+            /**
+             * This will finish buffering, and output the page.
+             * It also appends the magic JS onto the beginning of the page,
+             * if enabled, to allow working with Ajax.
+             * 
+             * Note that if PHP Error has been disabled in the php.ini file,
+             * or through some other option, such as running from the command line,
+             * then this will do nothing (as no buffering will take place).
+             */
+            public function endBuffer() {
+                if ( $this->isBufferSetup ) {
                     if ( 
                             !$this->isAjax &&
                              $this->catchAjaxErrors &&
@@ -1434,7 +1494,8 @@
                         $handlers = ob_list_handlers();
 
                         $wasGZHandler = false;
-                        $this->isInEndBuffer = true;
+
+                        $this->bufferOutput = true;
                         for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
                             $handler = $handlers[$i];
 
@@ -1447,11 +1508,8 @@
                                 ob_end_flush();
                             }
                         }
-                        $this->isInEndBuffer = false;
 
-                        if ( $this->bufferOutput ) {
-                            $content = $this->bufferOutput;
-                        }
+                        $content = $this->discardBuffer();
 
                         if ( $wasGZHandler ) {
                             ob_start('ob_gzhandler');
@@ -2260,6 +2318,8 @@
              * more than that.
              */
             public function reportError( $code, $message, $errLine, $errFile, $ex=null ) {
+                $this->discardBuffer();
+
                 if (
                         $ex === null &&
                         $code === 1 &&
@@ -2632,10 +2692,6 @@
                                 }
                             } );
                         }
-
-                        register_shutdown_function( function() use ( $self ) {
-                            $self->__onShutdown();
-                        });
 
                         $self->isShutdownRegistered = true;
                     }
@@ -3248,13 +3304,13 @@
            
                 // clean out anything displayed already
                 try {
-                    ob_clean();
+                    @ob_clean();
                 } catch ( Exception $ex ) { /* do nothing */ }
 
                 if (!$this->htmlOnly && ErrorHandler::isNonPHPRequest()) {
-                    header( "Content-Type: text/html" );
+                    @header( "Content-Type: text/html" );
                 }
-                header( ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE );
+                @header( ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE );
 
                 echo '<!DOCTYPE html>';
 
