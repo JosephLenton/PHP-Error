@@ -529,6 +529,16 @@
                     'text/html',
                     'application/xhtml+xml'
             );
+
+            private static function isIIS() {
+                return (
+                                $_SERVER['SERVER_SOFTWARE'] &&
+                                strpos($_SERVER['SERVER_SOFTWARE'], 'IIS/') !== false
+                        ) || (
+                                $_SERVER['_FCGI_X_PIPE_'] &&
+                                strpos($_SERVER['_FCGI_X_PIPE_'], 'IISFCGI') !== false
+                        );
+            }
             
             /**
              * This attempts to state if this is *not* a PHP request,
@@ -2276,9 +2286,13 @@
                     $parts = explode( "\n", $trace );
                     $trace = "        " . join( "\n        ", $parts );
 
-                    error_log( "$message \n           $file, $line \n$trace" );
+                    if ( ! ErrorHandler::isIIS() ) {
+                        error_log( "$message \n           $file, $line \n$trace" );
+                    }
                 } else {
-                    error_log( "$message \n           $file, $line" );
+                    if ( ! ErrorHandler::isIIS() ) {
+                        error_log( "$message \n           $file, $line" );
+                    }
                 }
             }
 
@@ -2580,6 +2594,10 @@
                     error_reporting( $this->defaultErrorReportingOff );
 
                     @ini_restore( 'html_errors' );
+                    
+                    if ( ErrorHandler::isIIS() ) {
+                        @ini_restore( 'log_errors' );
+                    }
                 }
             }
 
@@ -2600,6 +2618,10 @@
                     // all errors \o/ !
                     error_reporting( $this->defaultErrorReportingOn );
                     @ini_set( 'html_errors', false );
+
+                    if ( ErrorHandler::isIIS() ) {
+                        @ini_set( 'log_errors', false );
+                    }
 
                     set_error_handler(
                             function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
@@ -2822,7 +2844,7 @@
 
                                 iframe.style.background = 'transparent';
                                 iframe.style.opacity = 0;
-                                iframe.style.zIndex = 100000;
+                                iframe.style.zIndex = 100001;
                                 iframe.style.top = 0;
                                 iframe.style.right = 0;
                                 iframe.style.left = 0;
@@ -3365,7 +3387,7 @@
 
                     h1,
                     h2 {
-                        font-family: "Segoe UI", "Segoe WP", "Helvetica Neue", Roboto, "sans-serif";
+                        font-family: "Segoe UI Light","Helvetica Neue",'RobotoLight',"Segoe UI","Segoe WP",sans-serif;
                         font-weight: 100;
                     }
                     h1 {
@@ -3384,7 +3406,17 @@
                                 -moz-box-sizing: border-box;
                                 box-sizing: border-box;
 
-                                position: relative;
+                                /*
+                                 * Take over the page via CSS,
+                                 * so we block anything already rendered.
+                                 */
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                right: 0;
+                                bottom: 0;
+
+                                z-index: 100000;
 
                                 height: 100%;
                                 overflow: auto;
@@ -3407,6 +3439,12 @@
                                 min-height: 0;
 
                                 overflow: hidden;
+
+                                position: relative;
+                                top: auto;
+                                left: auto;
+                                right: auto;
+                                bottom: auto;
                             }
 
                     #ajax-info,
@@ -3588,21 +3626,25 @@
 
                                 color: #ddd;
                                 list-style-type: none;
+
                                 /* needed for empty lines */
                                 min-height: 20px;
                                 padding-right: 18px;
                                 padding-bottom: 1px;
 
-                                border-radius: 2px;
-
-                                -moz-box-sizing: border-box;
                                 box-sizing: border-box;
+                                padding-left: 166px;
+
+                                border-radius: 2px;
 
                                 display: inline-block;
                                 float: left;
                                 clear: both;
 
                                 position: relative;
+
+                                /* Chrome fix */
+                                min-width: 50%;
                             }
                                 .error-file-line-number {
                                     position: absolute;
@@ -3678,6 +3720,7 @@
                             .error-stack-trace-line > .filename {
                             }
                             .error-stack-trace-line > .lineinfo {
+                                width: 100%; /* fix for chrome */
                                 padding-right:18px;
                                 padding-left: 82px;
                                 text-indent: -64px;
