@@ -532,10 +532,10 @@
 
             private static function isIIS() {
                 return (
-                                $_SERVER['SERVER_SOFTWARE'] &&
+                                isset($_SERVER['SERVER_SOFTWARE']) &&
                                 strpos($_SERVER['SERVER_SOFTWARE'], 'IIS/') !== false
                         ) || (
-                                $_SERVER['_FCGI_X_PIPE_'] &&
+                                isset($_SERVER['_FCGI_X_PIPE_']) &&
                                 strpos($_SERVER['_FCGI_X_PIPE_'], 'IISFCGI') !== false
                         );
             }
