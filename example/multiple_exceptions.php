@@ -10,7 +10,7 @@
         try {
             c();
         } catch ( Exception $ex ) {
-            throw new Exception( "thrown exception", 0, $ex );
+            throw new Exception( "thrown exception test", 0, $ex );
         }
     }
 
@@ -22,7 +22,7 @@
         try {
             e();
         } catch ( Exception $ex ) {
-            throw new Exception( "thrown exception", 0, $ex );
+            throw new Exception( "thrown exception test", 0, $ex );
         }
     }
 
