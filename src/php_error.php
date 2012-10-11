@@ -2396,7 +2396,7 @@
 
                     // load the session, if it's there
 
-                    if ( isset($_COOKIE[session_name()]) && session_id() !== '' ) {
+                    if ( isset($_COOKIE[session_name()]) && session_id() !== '' &&  !isset($_SESSION)) {
                         session_start();
                     }
 
