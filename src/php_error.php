@@ -1,12 +1,12 @@
 <?php
     /**
      * @license
-     * 
+     *
      * PHP Error
-     * 
+     *
      * Copyright (c) 2012 Joseph Lenton
      * All rights reserved.
-     * 
+     *
      * Redistribution and use in source and binary forms, with or without
      * modification, are permitted provided that the following conditions are met:
      *     * Redistributions of source code must retain the above copyright
@@ -17,7 +17,7 @@
      *     * Neither the name of the <organization> nor the
      *       names of its contributors may be used to endorse or promote products
      *       derived from this software without specific prior written permission.
-     * 
+     *
      * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
      * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
      * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
      * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
      * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
      * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-     * 
+     *
      * Uses:
      *      JSMin-php   https://github.com/rgrove/jsmin-php/
      *      jQuery      http://jquery.com/
@@ -36,55 +36,55 @@
 
     /**
      * PHP Error
-     * 
+     *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-     * 
+     *
      * WARNING! It is downright _DANGEROUS_ to use this in production, on
      * a live website. It should *ONLY* be used for development.
-     * 
+     *
      * PHP Error will kill your environment at will, clear the output
      * buffers, and allows HTML injection from exceptions.
-     * 
+     *
      * In future versions it plans to do far more then that.
-     * 
+     *
      * If you use it in development, awesome! If you use it in production,
      * you're an idiot.
-     * 
+     *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-     * 
+     *
      * = Info
-     * 
+     *
      * A small API for replacing the standard PHP errors, with prettier
      * error reporting. This will change the error reporting level, and this
      * is deliberate, as I believe in strict development errors.
-     * 
+     *
      * simple usage:
-     * 
+     *
      *      \php_error\reportErrors();
-     * 
+     *
      * Advanced example:
-     * 
+     *
      * There is more too it if you want more customized error handling. You
      * can pass in options, to customize the setup, and you get back a
      * handler you can alter at runtime.
-     * 
+     *
      *      $handler = new \php_error\ErrorHandler( $myOptions );
      *      $handler->turnOn();
-     * 
+     *
      * There should only ever be one handler! This is an (underdstandable)
      * limitation in PHP. It's because if an exception or error is raised,
      * then there is a single point of handling it.
-     * 
+     *
      * = INI Options
-     * 
+     *
      * - php_error.force_disabled When set to a true value (such as on),
      *                            this forces this to be off.
      *                            This is so you can disable this script
      *                            in your production servers ini file,
      *                            incase you accidentally upload this there.
-     * 
+     *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-     * 
+     *
      * @author Joseph Lenton | https://github.com/josephlenton
      */
 
@@ -117,14 +117,14 @@
 
         /*
          * These are used as token identifiers by PHP.
-         * 
+         *
          * If they are missing, then they should never pop out of PHP,
          * so we just give them their future value.
-         * 
+         *
          * They are primarily here so I don't have to alter the 5.3
          * compliant code. Instead I can delete pre-5.3 code (this
          * code), in the future.
-         * 
+         *
          * As long as the value is unique, and does not clash with PHP,
          * then any number could be used. That is why they start counting
          * at 100,000.
@@ -161,7 +161,7 @@
              * check that display errors is on
              * and ensure we are *not* a command line script.
              */
-            $_php_error_is_ini_enabled = 
+            $_php_error_is_ini_enabled =
                     ! @get_cfg_var( 'php_error.force_disabled' ) &&
                     ! @get_cfg_var( 'php_error.force_disable'  ) &&
                       @ini_get('display_errors') === '1'         &&
@@ -172,10 +172,10 @@
         /**
          * This is shorthand for turning off error handling,
          * calling a block of code, and then turning it on.
-         * 
+         *
          * However if 'reportErrors' has not been called,
          * then this will silently do nothing.
-         * 
+         *
          * @param callback A PHP function to call.
          * @return The result of calling the callback.
          */
@@ -191,19 +191,19 @@
 
         /**
          * Turns on error reporting, and returns the handler.
-         * 
+         *
          * If you just want error reporting on, then don't bother
          * catching the handler. If you're building something
          * clever, like a framework, then you might want to grab
          * and use it.
-         * 
+         *
          * Note that calling this a second time will replace the
          * global error handling with a new error handler.
          * The existing one will be turned off, and the new one
          * turned on.
-         * 
+         *
          * You can't use two at once!
-         * 
+         *
          * @param options Optional, options declaring how PHP Error should be setup and used.
          * @return The ErrorHandler used for reporting errors.
          */
@@ -227,18 +227,18 @@
              *  {closure}()
              *  blah::foo()
              *  foo()
-             * 
+             *
              * It is:
              *      a closure
              *      or a method or function
              *      followed by parenthesis '()'
-             * 
+             *
              *      a function is 'namespace function'
              *      a method is 'namespace class::function', or 'namespace class->function'
              *      the whole namespace is optional
              *          namespace is made up of an '\' and then repeating 'namespace\'
              *          both the first slash, and the repeating 'namespace\', are optional
-             * 
+             *
              * 'END' matches it at the end of a string, the other one does not.
              */
             const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(((\\\\)?(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*\\\\)*)?\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
@@ -253,7 +253,7 @@
              * where the error is reported. This is the number
              * of lines around the line in question,
              * including that line.
-             * 
+             *
              * So '9' will be the error line + 4 lines above + 4 lines below.
              */
             const NUM_FILE_LINES = 13;
@@ -271,7 +271,7 @@
             /**
              * At the time of writing, scalar type hints are unsupported.
              * By scalar, I mean 'string' and 'integer'.
-             * 
+             *
              * If they do get added, this is here as a trap to turn scalar
              * type hint warnings on and off.
              */
@@ -428,7 +428,7 @@
                     T_DECLARE                     => 'syntax-keyword',
                     T_DEFAULT                     => 'syntax-keyword',
                     T_DO                          => 'syntax-keyword',
-                    
+
                     T_ELSE                        => 'syntax-keyword',
                     T_ELSEIF                      => 'syntax-keyword',
                     T_ENDDECLARE                  => 'syntax-keyword',
@@ -445,7 +445,7 @@
                     T_FUNCTION                    => 'syntax-keyword',
                     T_GLOBAL                      => 'syntax-keyword',
                     T_GOTO                        => 'syntax-keyword',
-                    
+
                     T_IF                          => 'syntax-keyword',
                     T_IMPLEMENTS                  => 'syntax-keyword',
                     T_INSTANCEOF                  => 'syntax-keyword',
@@ -508,7 +508,7 @@
             /**
              * A list of methods which are known to call the autoloader,
              * but should not error, if the class is not found.
-             * 
+             *
              * They are allowed to fail, so we don't store a class not
              * found exception if they do.
              */
@@ -539,7 +539,7 @@
                                 strpos($_SERVER['_FCGI_X_PIPE_'], 'IISFCGI') !== false
                         );
             }
-            
+
             /**
              * This attempts to state if this is *not* a PHP request,
              * but it cannot say if it *is* a PHP request. It achieves
@@ -583,7 +583,7 @@
             /**
              * Looks up a description for the symbol given,
              * and if found, it is returned.
-             * 
+             *
              * If it's not found, then the symbol given is returned.
              */
             private static function phpSymbolToDescription( $symbol ) {
@@ -596,9 +596,9 @@
 
             /**
              * Attempts to syntax highlight the code snippet done.
-             * 
+             *
              * This is then returned as HTML, ready to be dumped to the screen.
-             * 
+             *
              * @param code An array of code lines to syntax highlight.
              * @return HTML version of the code given, syntax highlighted.
              */
@@ -702,13 +702,13 @@
             /**
              * Splits a given function name into it's 'class, function' parts.
              * If there is no class, then null is returned.
-             * 
+             *
              * It also returns these parts in an array of: array( $className, $functionName );
-             * 
+             *
              * Usage:
-             * 
+             *
              *      list( $class, $function ) = ErrorHandler::splitFunction( $name );
-             * 
+             *
              * @param name The function name to split.
              * @return An array containing class and function name.
              */
@@ -750,7 +750,7 @@
                             ( $klass ?
                                     array( "\\$klass", $functionName ) :
                                     $functionName ),
-                            $name->name, 
+                            $name->name,
                             true
                     );
 
@@ -840,12 +840,12 @@
              * Returns the values given, as HTML, syntax highlighted.
              * It's a shorter, slightly faster, more no-nonsense approach
              * then 'syntaxHighlight'.
-             * 
+             *
              * This is for syntax highlighting:
              *  - fun( [args] )
              *  - class->fun( [args] )
              *  - class::fun( [args] )
-             * 
+             *
              * Class and type can be null, to denote no class, but are not optional.
              */
             private static function syntaxHighlightFunction( $class, $type, $fun, &$args=null ) {
@@ -921,7 +921,7 @@
 
             /**
              * Checks if the item is in options, and if it is, then it is removed and returned.
-             * 
+             *
              * If it is not found, or if options is not an array, then the alt is returned.
              */
             private static function optionsPop( &$options, $key, $alt=null ) {
@@ -1012,7 +1012,7 @@
                 $count  = count( $parts );
 
                 $newLongest = max( $newLongest, $count );
-                
+
                 if ( isset($newFolders[$count]) ) {
                     $folds = &$newFolders[$count];
                     $folds[]= $parts;
@@ -1026,10 +1026,10 @@
                     return getallheaders();
                 } else {
                     $headers = array();
-                    
+
                     foreach ( $_SERVER as $key => $value ) {
                         if ( strpos($key, 'HTTP_') === 0 ) {
-                            $key = str_replace( " ", "-", ucwords(strtolower( str_replace("_", " ", substr($key, 5)) )) ); 
+                            $key = str_replace( " ", "-", ucwords(strtolower( str_replace("_", " ", substr($key, 5)) )) );
                             $headers[ $key ] = $value;
                         }
                     }
@@ -1045,7 +1045,7 @@
 
                 /*
                  * Merge the headers_list into apache_response_headers.
-                 * 
+                 *
                  * This is because sometimes things are in one, which are
                  * not present in the other.
                  */
@@ -1137,58 +1137,58 @@
 
             /**
              * = Options =
-             * 
+             *
              * All options are optional, and so is passing in an options item.
              * You don't have to supply any, it's up to you.
-             * 
+             *
              * Note that if 'php_error.force_disable' is true, then this object
              * will try to look like it works, but won't actually do anything.
-             * 
+             *
              * All options can also be passed in from 'php.ini'. You do this
              * by setting it with 'php_error.' prefix. For example:
-             * 
+             *
              *      php_error.catch_ajax_errors = On
              *      php_error.error_reporting_on = E_ALL | E_STRICT
-             * 
+             *
              * Includes:
              *  = Types of errors this will catch =
              *  - catch_ajax_errors         When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors. Defaults to true.
              *  - catch_supressed_errors    The @ supresses errors. If set to true, then they are still reported anyway, but respected when false. Defaults to false.
              *  - catch_class_not_found     When true, loading a class that does not exist will be caught. This defaults to true.
-             * 
+             *
              *  = Error reporting level =
              *  - error_reporting_on        value for when errors are on, defaults to all errors
              *  - error_reporting_off       value for when errors are off, defaults to php.ini's error_reporting.
-             * 
+             *
              *  = Setup Details =
              *  - application_root          When it's working out hte stack trace, this is the root folder of the application, to use as it's base.
              *                              Defaults to the servers root directory.
-             * 
+             *
              *                              A relative path can be given, but lets be honest, an explicit path is the way to guarantee that you
              *                              will get the path you want. My relative might not be the same as your relative.
-             * 
-             *  - snippet_num_lines         The number of lines to display in the code snippet. 
+             *
+             *  - snippet_num_lines         The number of lines to display in the code snippet.
              *                              That includes the line being reported.
-             * 
+             *
              *  - server_name               The name for this server, defaults to "$_SERVER['SERVER_NAME']"
-             * 
+             *
              *  - ignore_folders            This is allows you to highlight non-framework code in a stack trace.
              *                              An array of folders to ignore, when working out the stack trace.
              *                              This is folder prefixes in relation to the application_root, whatever that might be.
              *                              They are only ignored if there is a file found outside of them.
              *                              If you still don't get what this does, don't worry, it's here cos I use it.
-             * 
+             *
              *  - application_folders       Just like ignore, but anything found in these folders takes precedence
              *                              over anything else.
-             * 
+             *
              *  - background_text           The text that appeares in the background. By default this is blank.
              *                              Why? You can replace this with the name of your framework, for extra customization spice.
-             * 
+             *
              *  - html_only                 By default, PHP Error only runs on ajax and HTML pages.
              *                              If this is false, then it will also run when on non-HTML
              *                              pages too, such as replying with images of JavaScript
              *                              from your PHP. Defaults to true.
-             * 
+             *
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
              */
@@ -1209,7 +1209,7 @@
 
                 /*
                  * Deal with the options.
-                 * 
+                 *
                  * They are removed one by one, and any left, will raise an error.
                  */
 
@@ -1258,6 +1258,12 @@
                     $this->defaultErrorReportingOn = E_ERROR | E_WARNING | E_PARSE | E_USER_DEPRECATED & ~E_DEPRECATED & ~E_STRICT;
                 }
 
+                $concrete5 = ErrorHandler::optionsPop( $options, 'concrete5', false );
+                if ( $concrete5 ) {
+                    $this->defaultErrorReportingOn = E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED;
+
+                }
+
                 if ( $options ) {
                     foreach ( $options as $key => $val ) {
                         throw new InvalidArgumentException( "Unknown option given $key" );
@@ -1297,11 +1303,11 @@
 
             /**
              * Turns error reporting on.
-             * 
+             *
              * This will use the strictest error reporting available, or the
              * level you pass in when creating this using the 'error_reporting_on'
              * option.
-             * 
+             *
              * @return This error reporting handler, for method chaining.
              */
             public function turnOn() {
@@ -1313,11 +1319,11 @@
 
             /**
              * Turns error reporting off.
-             * 
+             *
              * This will use the 'php.ini' setting for the error_reporting level,
              * or one you have passed in if you used the 'error_reporting_off'
              * option when creating this.
-             * 
+             *
              * @return This error reporting handler, for method chaining.
              */
             public function turnOff() {
@@ -1330,19 +1336,19 @@
              * Allows you to run a callback with strict errors turned off.
              * Standard errors still apply, but this will use the default
              * error and exception handlers.
-             * 
+             *
              * This is useful for when loading libraries which do not
              * adhere to strict errors, such as Wordpress.
-             * 
+             *
              * To use:
-             * 
+             *
              *      withoutErrors( function() {
              *          // unsafe code here
              *      });
-             * 
+             *
              * This will use the error_reporting value for when this is
              * turned off.
-             * 
+             *
              * @param callback A PHP function to call.
              * @return The result of calling the callback.
              */
@@ -1361,16 +1367,16 @@
                     return $callback();
                 }
             }
-            
+
             /**
-             * This is the shutdown function, which should *only* be called 
+             * This is the shutdown function, which should *only* be called
              * via 'register_shutdown_function'.
-             * 
+             *
              * It's exposed because it has to be exposed.
              */
             public function __onShutdown() {
                 global $_php_error_is_ini_enabled;
-                
+
                 if ( $_php_error_is_ini_enabled ) {
                     if ( $this->isOn() ) {
                         $error = error_get_last();
@@ -1406,21 +1412,21 @@
                     $this->lastGlobalErrorHandler = null;
                 }
             }
-            
+
             /**
              * This is intended to be used closely with 'onShutdown'.
              * It ensures that output buffering is turned on.
-             * 
+             *
              * Why? The user may output content, and *then* hit an error.
              * We cannot replace the page if this happens,
              * because they have already outputted information.
-             * 
+             *
              * So we buffer the page, and then output at the end of the page,
              * or when an error strikes.
              */
             private function startBuffer() {
                 global $_php_error_is_ini_enabled;
-                
+
                 if ( $_php_error_is_ini_enabled && !$this->isBufferSetup ) {
                     $this->isBufferSetup = true;
 
@@ -1458,7 +1464,7 @@
             /**
              * Turns off buffering, and discards anything buffered
              * so far.
-             * 
+             *
              * This will return what has been buffered incase you
              * do want it. However otherwise, it will be lost.
              */
@@ -1474,7 +1480,7 @@
             /**
              * Flushes the internal buffer,
              * outputting what is left.
-             * 
+             *
              * @param append Optional, extra content to append onto the output buffer.
              */
             private function flushBuffer() {
@@ -1488,14 +1494,14 @@
              * This will finish buffering, and output the page.
              * It also appends the magic JS onto the beginning of the page,
              * if enabled, to allow working with Ajax.
-             * 
+             *
              * Note that if PHP Error has been disabled in the php.ini file,
              * or through some other option, such as running from the command line,
              * then this will do nothing (as no buffering will take place).
              */
             public function endBuffer() {
                 if ( $this->isBufferSetup ) {
-                    if ( 
+                    if (
                             !$this->isAjax &&
                              $this->catchAjaxErrors &&
                             (!$this->htmlOnly || !ErrorHandler::isNonPHPRequest())
@@ -1526,7 +1532,7 @@
                         } else {
                             ob_start();
                         }
-           
+
                         $js = $this->getContent( 'displayJSInjection' );
                         $js = JSMin::minify( $js );
 
@@ -1540,7 +1546,7 @@
                         } else {
                             echo $js;
                         }
-          
+
                         echo $content;
                     }
                 }
@@ -1549,7 +1555,7 @@
             /**
              * Calls the given method on this object,
              * captures it's output, and then returns it.
-             * 
+             *
              * @param method The name of the method to call.
              * @return All of the text outputted during the method call.
              */
@@ -1599,14 +1605,14 @@
 
             /**
              * Finds the file named, and returns it's contents in an array.
-             * 
+             *
              * It's essentially the same as 'file_get_contents'. However
              * this will add caching at this PHP layer, avoiding lots of
              * duplicate calls.
-             * 
+             *
              * It also splits the file into an array of lines, and makes
              * it html safe.
-             * 
+             *
              * @param path The file to get the contents of.
              * @return The file we are after, as an array of lines.
              */
@@ -1638,9 +1644,9 @@
             /**
              * Reads out the code from the section of the line,
              * which is at fault.
-             * 
+             *
              * The array is in a mapping of: array( line-number => line )
-             * 
+             *
              * If something goes wrong, then null is returned.
              */
             private function readCodeFile( $errFile, $errLine ) {
@@ -1652,7 +1658,7 @@
 
                         $searchUp   = ceil( $numLines*0.75 );
                         $searchDown = $numLines - $searchUp;
-                        
+
                         $countLines = count( $lines );
 
                         /*
@@ -1735,14 +1741,14 @@
             /**
              * Attempts to remove the root path from the path given.
              * If the path can't be removed, then the original path is returned.
-             * 
+             *
              * For example if root is 'C:/users/projects/my_site',
              * and the file is 'C:/users/projects/my_site/index.php',
              * then the root is removed, and we are left with just 'index.php'.
-             * 
+             *
              * This is to remove line noise; you don't need to be told the
              * 'C:/whatever' bit 20 times.
-             * 
+             *
              * @param root The root path to remove.
              * @param path The file we are removing the root section from.
              */
@@ -1761,7 +1767,7 @@
 
             /**
              * Parses, and alters, the errLine, errFile and message given.
-             * 
+             *
              * This includes adding syntax highlighting, removing duplicate
              * information we already have, and making the error easier to
              * read.
@@ -1791,7 +1797,7 @@
 
                 /*
                  * This is for calling a function that doesn't exist.
-                 * 
+                 *
                  * The message contains a long description of where this takes
                  * place, even though we are already told this through line and
                  * file info. So we cut it out.
@@ -1912,7 +1918,7 @@
                 /*
                  * Unexpected symbol errors.
                  * For example 'unexpected T_OBJECT_OPERATOR'.
-                 * 
+                 *
                  * This swaps the 'T_WHATEVER' for the symbolic representation.
                  */
                 } else if ( $code === 4 ) {
@@ -1922,7 +1928,7 @@
                         $semiColonError = false;
                         if ( strpos($message, 'syntax error,') === 0 && $errLine > 2 ) {
                             $lines = ErrorHandler::getFileContents( $errFile );
-                            
+
                             $line = $lines[$errLine-1];
                             if ( preg_match( ErrorHandler::REGEX_MISSING_SEMI_COLON_FOLLOWING_LINE, $line ) !== 0 ) {
                                 $content = rtrim( join( "\n", array_slice($lines, 0, $errLine-1) ) );
@@ -2070,11 +2076,11 @@
                          * The code above can prioritize a location in the stack trace,
                          * this is 'stackSearchI'. So we should start our search from there,
                          * and work down the stack.
-                         * 
+                         *
                          * This is built in a way so that when it reaches the end, it'll loop
                          * back round to the beginning, and check the traces we didn't check
                          * last time.
-                         * 
+                         *
                          * If stackSearchI was not altered, then it just searches from top
                          * through to the bottom.
                          */
@@ -2107,7 +2113,7 @@
 
             /**
              * Parses the stack trace, and makes it look pretty.
-             * 
+             *
              * This includes adding in the syntax highlighting,
              * highlighting the colours for the files,
              * and padding with whitespace.
@@ -2169,7 +2175,7 @@
                                             trim( $contents[$trace['line']-1] )
                                     );
                                 }
-                            } 
+                            }
 
                             $trace['info'] = $info;
 
@@ -2299,7 +2305,7 @@
             /**
              * Given a class name, which can include a namespace,
              * this will report that it is not found.
-             * 
+             *
              * This will also report it as an exception,
              * so you will get a full stack trace.
              */
@@ -2322,11 +2328,11 @@
 
             /**
              * The entry point for handling an error.
-             * 
+             *
              * This is the lowest entry point for error reporting,
              * and for that reason it can either take just error info,
              * or a combination of error and exception information.
-             * 
+             *
              * Note that this will still log errors in the error log
              * even when it's disabled with ini. It just does nothing
              * more than that.
@@ -2556,7 +2562,7 @@
             /*
              * Even if disabled, we still act like reporting is on,
              * if it's turned on.
-             * 
+             *
              * We just don't do anything.
              */
             private function setEnabled( $isOn ) {
@@ -2567,7 +2573,7 @@
                 if ( $_php_error_is_ini_enabled ) {
                     /*
                      * Only turn off, if we're moving from on to off.
-                     * 
+                     *
                      * This is so if it's turned off without turning on,
                      * we don't change anything.
                      */
@@ -2577,7 +2583,7 @@
                         }
                     /*
                      * Always turn it on, even if already on.
-                     * 
+                     *
                      * This is incase it was messed up in some way
                      * by the user.
                      */
@@ -2594,7 +2600,7 @@
                     error_reporting( $this->defaultErrorReportingOff );
 
                     @ini_restore( 'html_errors' );
-                    
+
                     if ( ErrorHandler::isIIS() ) {
                         @ini_restore( 'log_errors' );
                     }
@@ -2603,14 +2609,14 @@
 
             /*
              * Now the actual hooking into PHP's error reporting.
-             * 
+             *
              * We enable _ALL_ errors, and make them all exceptions.
              * We also need to hook into the shutdown function so
              * we can catch fatal and compile time errors.
              */
             private function runEnableErrors() {
                 global $_php_error_is_ini_enabled;
-                
+
                 if ( $_php_error_is_ini_enabled ) {
                     $catchSurpressedErrors = &$this->catchSurpressedErrors;
                     $self = $this;
@@ -2627,10 +2633,10 @@
                             function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
                                 /*
                                  * DO NOT! log the error.
-                                 * 
+                                 *
                                  * Either it's thrown as an exception, and so logged by the exception handler,
                                  * or we return false, and it's logged by PHP.
-                                 * 
+                                 *
                                  * Also DO NOT! throw an exception, instead report it.
                                  * This is because if an operation raises both a user AND
                                  * fatal error (such as require), then the exception is
@@ -2649,7 +2655,7 @@
                                     return false;
                                 }
                             },
-                            $this->defaultErrorReportingOn 
+                            $this->defaultErrorReportingOn
                     );
 
                     set_exception_handler( function($ex) use ( $self ) {
@@ -2675,7 +2681,7 @@
                              * This is done for two reasons:
                              *  - functions like 'class_exists' will run the autoloader, and we shouldn't error on them
                              *  - on PHP 5.3.0, the class loader registered functions does *not* return closure objects, so we can't do anything clever.
-                             * 
+                             *
                              * So we watch, but don't touch.
                              */
                             spl_autoload_register( function($className) use ( $self, &$classException, &$autoloaderFuns ) {
@@ -2727,12 +2733,12 @@
 
                     (function( window ) {
                         if ( window.XMLHttpRequest ) {
-                            /** 
+                            /**
                              * A method wrapping helper function.
-                             * 
+                             *
                              * Wraps the method given, from the old prototype to the new
                              * XMLHttpRequest prototype.
-                             * 
+                             *
                              * This only happens if the old one actually has that prototype.
                              * If the browser doesn't support a prototype, then it doesn't
                              * get wrapped.
@@ -2775,10 +2781,10 @@
                             /*
                              * Certain properties will error when read,
                              * and which ones do vary from browser to browser.
-                             * 
+                             *
                              * I've found both Chrome and Firefox will error
                              * on _different_ properties.
-                             * 
+                             *
                              * So every read needs to be wrapped in a try/catch,
                              * and just hope it doesn't error.
                              */
@@ -2860,7 +2866,7 @@
                                     }
 
                                     var iBody = iDoc.getElementsByTagName("body")[0];
-                                    iBody.innerHTML = response; 
+                                    iBody.innerHTML = response;
                                     var iHead = iDoc.getElementsByTagName("head")[0];
 
                                     // re-run the script tags
@@ -2894,7 +2900,7 @@
 
                                     /*
                                      * Retry Handler.
-                                     * 
+                                     *
                                      * Clear this, make a new (real) XMLHttpRequest,
                                      * and then re-run everything.
                                      */
@@ -2914,7 +2920,7 @@
 
                                     /*
                                      * The close handler.
-                                     * 
+                                     *
                                      * When closed, the response is cleared,
                                      * and then the request finishes with null info.
                                      */
@@ -2944,7 +2950,7 @@
 
                                 /*
                                  * Placed inside a timeout, incase the document doesn't exist yet.
-                                 * 
+                                 *
                                  * Can happen if the page ajax's straight away.
                                  */
                                 setTimeout( function() {
@@ -2957,7 +2963,7 @@
 
                             /**
                              * The middle man http request object.
-                             * 
+                             *
                              * Acts just like a normal one, but will show errors if they
                              * occur instead of running the result.
                              */
@@ -2972,7 +2978,7 @@
                                 /**
                                  * With a buggy XMLHttpRequest, it's possible to accidentally run the error handler
                                  * multiple times.
-                                 * 
+                                 *
                                  * This is a flag to only do it once, to keep the code more defensive.
                                  */
                                 var errorOnce   = true,
@@ -3003,7 +3009,7 @@
 
                                     /*
                                      * Success ! \o/
-                                     * 
+                                     *
                                      * Pass any state change on to the parent caller,
                                      * unless we hit an ajaxy error.
                                      */
@@ -3059,7 +3065,7 @@
                                 /*
                                  * Private fields are stored underneath an unhappy face,
                                  * to localize them.
-                                 * 
+                                 *
                                  * Access becomes:
                                  *  this.__.fieldName
                                  */
@@ -3131,7 +3137,7 @@
                 if ( isset($_SERVER['QUERY_STRING']) ) {
                     $requestUrl = str_replace( $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
                     $requestUrlLen = strlen( $requestUrl );
-                    
+
                     // remove the '?' if it's there (I suspect it isn't always, but don't take my word for it!)
                     if ( $requestUrlLen > 0 && substr($requestUrl, $requestUrlLen-1) === '?' ) {
                         $requestUrl = substr( $requestUrl, 0, $requestUrlLen-1 );
@@ -3184,7 +3190,7 @@
                                             $fileLines     = $fileLinesSet->getLines();
                                             $show          = $fileLinesSet->isShown();
                                             $highlightLine = $fileLinesSet->getLine();
-                                            
+
                                             // calculate last line number length
                                             end($fileLines);
                                             $maxLineNumber = key($fileLines);
@@ -3220,7 +3226,7 @@
                                     <?php } ?>
                                 </div>
                             <?php }
-                            
+
                             if ( $stackTrace !== null ) {
                                 echo $stackTrace;
                             }
@@ -3306,17 +3312,17 @@
 
             /**
              * A generic function for clearing the buffer, and displaying error output.
-             * 
+             *
              * A function needs to be given, and then this is run at the correct time.
              * There are two ways this can be used:
-             * 
+             *
              *  displayHTML( $head, $body )
-             * 
+             *
              * Here 'head' is run straight after the doctype, whilst 'body' is run as
              * the body for the content. The other way is:
-             * 
+             *
              *  displayHTML( $body )
-             * 
+             *
              * Here there is only content.
              */
             function displayHTML( Closure $head, $body=null, $javascript=null ) {
@@ -3324,7 +3330,7 @@
                     $body = $head;
                     $head = null;
                 }
-           
+
                 // clean out anything displayed already
                 try {
                     @ob_clean();
@@ -3346,7 +3352,7 @@
                 ?><style>
                     html, body {
                         margin: 0;
-                        padding: 0; 
+                        padding: 0;
                         width: 100%;
                         height: 100%;
                     }
@@ -3357,7 +3363,7 @@
                         }
 
                     ::-moz-selection{background: #662039 !important; color: #fff !important; text-shadow: none;}
-                    ::selection {background: #662039 !important; color: #fff !important; text-shadow: none;} 
+                    ::selection {background: #662039 !important; color: #fff !important; text-shadow: none;}
 
                     a,
                     .error-stack-trace-line {
@@ -3763,7 +3769,7 @@
                             clear: both;
                         }
                         .error_dump_header {
-                            color: #eb4; 
+                            color: #eb4;
                             margin: 0;
                             margin-left: -6px;
                         }
@@ -3785,15 +3791,15 @@
                             white-space: normal;
                             max-width: 100%;
                         }
-                        
+
                     <?php
                     /*
                      * Code and Stack highlighting colours
-                     * 
+                     *
                      * The way this works, is that syntax highlighting is turned off
                      * for .pre-highlight. It then gets turns on for .pre-highlight,
                      * if it matches certain criteria.
-                     * 
+                     *
                      * The emphasis is that pre-highlight is by default 'no highlight'.
                      */
                     ?>
@@ -3945,7 +3951,7 @@
                 }
             }
         }
-         
+
         /**
          * This is a carbon copy of \ErrorException.
          * However that is only supported in PHP 5.1 and above,
