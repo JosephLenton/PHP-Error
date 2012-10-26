@@ -2989,9 +2989,12 @@
                                      * Check headers for error.
                                      */
                                     if ( ! isAjaxError && state >= 2 ) {
+                                        /*
+                                         * It's null in some browsers, and an empty string in others.
+                                         */
                                         var header = inner.getResponseHeader( '<?php echo ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY ?>' );
 
-                                        if ( header !== null ) {
+                                        if ( header !== null && header !== '' ) {
                                             self.__.isAjaxError = true;
                                             isAjaxError = true;
                                         }
@@ -3050,6 +3053,10 @@
                                             errorOnce
                                     ) {
                                         errorOnce = false;
+                                        if ( window.console && window.console.log ) {
+                                            window.console.log( 'Ajax Error Calling: ' + self.__.url );
+                                        }
+
                                         runFail.call( self, ev );
                                     }
                                 };
@@ -3057,7 +3064,7 @@
                                 copyRequestProperties( inner, this, true );
 
                                 /*
-                                 * Private fields are stored underneath an unhappy face,
+                                 * Private fields are stored underneath the unhappy face,
                                  * to localize them.
                                  * 
                                  * Access becomes:
@@ -3067,7 +3074,8 @@
                                         methodCalls: [],
                                         inner: inner,
                                         isAjaxError: false,
-                                        isSynchronous: false
+                                        isSynchronous: false,
+                                        url: ''
                                 };
                             }
 
@@ -3093,8 +3101,11 @@
                                     args: args
                                 });
                             }
+                            var grabOpen = function( args, method ) {
+                                this.__.url = args[1];
+                            }
 
-                            wrapMethod( XMLHttpRequest, old, 'open'        , saveRequest, copyIn, isSynchronous );
+                            wrapMethod( XMLHttpRequest, old, 'open'        , saveRequest, copyIn, isSynchronous, grabOpen );
                             wrapMethod( XMLHttpRequest, old, 'abort'       , saveRequest, copyIn );
                             wrapMethod( XMLHttpRequest, old, 'send'        , saveRequest, copyIn, addHeader );
                             wrapMethod( XMLHttpRequest, old, 'sendAsBinary', saveRequest, copyIn, addHeader );
