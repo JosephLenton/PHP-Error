@@ -1495,38 +1495,38 @@
              */
             public function endBuffer() {
                 if ( $this->isBufferSetup ) {
+                    $content  = ob_get_contents();
+                    $handlers = ob_list_handlers();
+
+                    $wasGZHandler = false;
+
+                    $this->bufferOutput = true;
+                    for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
+                        $handler = $handlers[$i];
+
+                        if ( $handler === 'ob_gzhandler' ) {
+                            $wasGZHandler = true;
+                            ob_end_clean();
+                        } else if ( $handler === 'default output handler' ) {
+                            ob_end_clean();
+                        } else {
+                            ob_end_flush();
+                        }
+                    }
+
+                    $content = $this->discardBuffer();
+
+                    if ( $wasGZHandler ) {
+                        ob_start('ob_gzhandler');
+                    } else {
+                        ob_start();
+                    }
+
                     if ( 
                             !$this->isAjax &&
                              $this->catchAjaxErrors &&
                             (!$this->htmlOnly || !ErrorHandler::isNonPHPRequest())
                     ) {
-                        $content  = ob_get_contents();
-                        $handlers = ob_list_handlers();
-
-                        $wasGZHandler = false;
-
-                        $this->bufferOutput = true;
-                        for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
-                            $handler = $handlers[$i];
-
-                            if ( $handler === 'ob_gzhandler' ) {
-                                $wasGZHandler = true;
-                                ob_end_clean();
-                            } else if ( $handler === 'default output handler' ) {
-                                ob_end_clean();
-                            } else {
-                                ob_end_flush();
-                            }
-                        }
-
-                        $content = $this->discardBuffer();
-
-                        if ( $wasGZHandler ) {
-                            ob_start('ob_gzhandler');
-                        } else {
-                            ob_start();
-                        }
-           
                         $js = $this->getContent( 'displayJSInjection' );
                         $js = JSMin::minify( $js );
 
@@ -1540,9 +1540,9 @@
                         } else {
                             echo $js;
                         }
-          
-                        echo $content;
                     }
+
+                    echo $content;
                 }
             }
 
@@ -2898,48 +2898,51 @@
                                      * Clear this, make a new (real) XMLHttpRequest,
                                      * and then re-run everything.
                                      */
-                                    iDoc.getElementById('ajax-retry').onclick = function() {
-                                        var methodCalls = self.__.methodCalls;
+                                    var retry = iDoc.getElementById('ajax-retry');
+                                    if ( retry ) {
+                                        retry.onclick = function() {
+                                            var methodCalls = self.__.methodCalls;
 
-                                        initializeXMLHttpRequest.call( self );
-                                        for ( var i = 0; i < methodCalls.length; i++ ) {
-                                            var method = methodCalls[i];
-                                            self[method.method].apply( self, method.args );
-                                        }
+                                            initializeXMLHttpRequest.call( self );
+                                            for ( var i = 0; i < methodCalls.length; i++ ) {
+                                                var method = methodCalls[i];
+                                                self[method.method].apply( self, method.args );
+                                            }
 
-                                        closeIFrame();
+                                            closeIFrame();
 
-                                        return false;
-                                    };
+                                            return false;
+                                        };
 
-                                    /*
-                                     * The close handler.
-                                     * 
-                                     * When closed, the response is cleared,
-                                     * and then the request finishes with null info.
-                                     */
-                                    iDoc.getElementById('ajax-close').onclick = function() {
-                                        copyRequestProperties( self.__.inner, self, true );
+                                        /*
+                                         * The close handler.
+                                         * 
+                                         * When closed, the response is cleared,
+                                         * and then the request finishes with null info.
+                                         */
+                                        iDoc.getElementById('ajax-close').onclick = function() {
+                                            copyRequestProperties( self.__.inner, self, true );
 
-                                        // clear the response
-                                        self.response       = '';
-                                        self.responseText   = '';
-                                        self.responseXML    = null;
+                                            // clear the response
+                                            self.response       = '';
+                                            self.responseText   = '';
+                                            self.responseXML    = null;
 
-                                        if ( self.onreadystatechange ) {
-                                            self.onreadystatechange( ev );
-                                        }
+                                            if ( self.onreadystatechange ) {
+                                                self.onreadystatechange( ev );
+                                            }
 
-                                        closeIFrame();
-                                        return false;
-                                    };
+                                            closeIFrame();
+                                            return false;
+                                        };
 
-                                    var html = iDoc.getElementsByTagName('html')[0];
-                                    html.setAttribute( 'class', 'ajax' );
+                                        var html = iDoc.getElementsByTagName('html')[0];
+                                        html.setAttribute( 'class', 'ajax' );
 
-                                    setTimeout( function() {
-                                        iframe.style.opacity = 1;
-                                    }, 1 );
+                                        setTimeout( function() {
+                                            iframe.style.opacity = 1;
+                                        }, 1 );
+                                    }
                                 }
 
                                 /*
