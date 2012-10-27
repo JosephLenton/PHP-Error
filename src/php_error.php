@@ -1264,9 +1264,13 @@
                     }
                 }
 
-                $this->isAjax =
-                        isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) &&
-                        ( $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest' );
+                $this->isAjax = (
+                                isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) &&
+                                ( $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest' )
+                        ) || (
+                                isset( $_REQUEST['php_error_is_ajax'] ) &&
+                                $_REQUEST['php_error_is_ajax']
+                        );
 
                 $this->isBufferSetup = false;
                 $this->bufferOutputStr = '';
