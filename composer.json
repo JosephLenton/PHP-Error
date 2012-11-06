@@ -1,9 +1,9 @@
 {
-	"name": "JosephLenton/PHPError",
+	"name": "joseph-lenton/php-error",
 	"description": "Better error reporting for PHP, and prettier too!",
 	"version": "1.0.0",
 	"homepage": "https://github.com/JosephLenton/PHP-Error",
-	"license": "BSD",
+	"license": "BSD-3-Clause",
 	"require": {
 		"php": ">=5.3.0"
 	},
