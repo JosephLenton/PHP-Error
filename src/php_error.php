@@ -2620,7 +2620,6 @@
 
                     // all errors \o/ !
                     error_reporting( $this->defaultErrorReportingOn );
-                    @ini_set( 'html_errors', false );
 
                     if ( ErrorHandler::isIIS() ) {
                         @ini_set( 'log_errors', false );
@@ -2641,6 +2640,11 @@
                                  */
                                 if ( $self->isOn() ) {
                                     /*
+                                     * Turning off 'html_errors' at this point avoids interference 
+                                     * with xDebugs 'var_dump()'-overload, thus preserving prettyfied dumps
+                                     */
+                                    @ini_set( 'html_errors', false );
+                                    /*
                                      * When using an @, the error reporting drops to 0.
                                      */
                                     if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
@@ -2657,6 +2661,11 @@
 
                     set_exception_handler( function($ex) use ( $self ) {
                         if ( $self->isOn() ) {
+                            /*
+                             * Turning off 'html_errors' at this point avoids interference 
+                             * with xDebugs 'var_dump()'-overload, thus preserving prettyfied dumps
+                             */
+                            @ini_set( 'html_errors', false );
                             $self->reportException( $ex );
                         } else {
                             return false;
