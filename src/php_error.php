@@ -1135,6 +1135,8 @@
 
             private $classNotFoundException;
 
+            private $fileLinkFormat;
+
             /**
              * = Options =
              * 
@@ -1251,6 +1253,8 @@
                 $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
 
                 $this->classNotFoundException   = null;
+                
+                $this->fileLinkFormat               = ErrorHandler::optionsPop( $options, 'file_link_format', null  );
 
                 $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
                 if ( $wordpress ) {
@@ -2235,9 +2239,22 @@
                             }
 
                             // line + file + info
+                            $link = trim($file);
+                            if (!empty($this->fileLinkFormat)) {
+                              $href = $this->fileLinkFormat;
+                              if (strpos($link, $this->applicationRoot) === FALSE && file_exists($this->applicationRoot . '/' . $link)) {
+                                $href = str_replace('%f', $this->applicationRoot . '/' . $link, $href);
+                              }
+                              else {
+                                $href = str_replace('%f', $link, $href);
+                              }
+                              $href = str_replace('%l', $line, $href);
+                              $link = '<a href="' . $href . '">' . $link . '</a>';
+                            }
+                            
                             $stackStr =
                                     "<td class='linenumber'>$line</td>" .
-                                    "<td class='$fileKlass'>$file</td>" .
+                                    "<td class='$fileKlass'>$link</td>" .
                                     "<td class='lineinfo'>$info</td>"   ;
 
                             if ( $trace['is_native'] ) {
@@ -3139,6 +3156,7 @@
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
                 $displayLineNumber = $this->displayLineNumber;
+                $fileLinkFormat    = $this->fileLinkFormat;
 
                 /*
                  * When a query string is not provided,
@@ -3170,7 +3188,7 @@
                         function() use (
                                 $requestUrl,
                                 $backgroundText, $serverName, $applicationRoot,
-                                $message, $errLine, $errFile, $errFileType, $stackTrace,
+                                $message, $errLine, $errFile, $fileLinkFormat, $errFileType, $stackTrace,
                                 &$fileLinesSets, $numFileLines,
                                 $displayLineNumber,
                                 $dumpInfo
@@ -3192,7 +3210,21 @@
                                 </span>
                             </h2>
                             <h1 id="error-title"><?php echo $message ?></h1>
-                            <h2 id="error-file" class="<?php echo $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
+                            <?php
+                              $link = trim($errFile);
+                              if (!empty($fileLinkFormat)) {
+                                $href = $fileLinkFormat;
+                                if (strpos($link, $applicationRoot) === FALSE && file_exists($applicationRoot . '/' . $errFile)) {
+                                  $href = str_replace('%f', $applicationRoot . '/' . $errFile, $href);
+                                }
+                                else {
+                                  $href = str_replace('%f', $errFile, $href);
+                                }
+                                $href = str_replace('%l', $errLine, $href);
+                                $link = '<a href="' . $href . '">' . $link . '</a>';
+                              }
+                            ?>
+                            <h2 id="error-file" class="<?php echo $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $link ?></span></h2>
                             <?php if ( $fileLinesSets ) { ?>
                                 <div id="error-files">
                                     <?php
@@ -3303,7 +3335,7 @@
                                                                 var file = $file.text(),
                                                                     line = $this.find('.linenumber').text();
 
-                                                                filename.text( file );
+                                                                filename.html( file );
                                                                 filename.attr( 'class', $file.attr('class') );
                                                                 linenumber.text( line );
                                                             }
