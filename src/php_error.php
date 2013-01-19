@@ -1196,7 +1196,11 @@
              */
             public function __construct( $options=null ) {
                 // there can only be one to rule them all
-                global $_php_error_global_handler;
+                global $_php_error_global_handler, $_php_error_is_ini_enabled;
+                // Don't set up if not allowed
+                if(!$_php_error_is_ini_enabled) {
+                  return null;
+                }
                 if ( $_php_error_global_handler !== null ) {
                     $this->lastGlobalErrorHandler = $_php_error_global_handler;
                 } else {
