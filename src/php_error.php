@@ -1231,7 +1231,7 @@
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
                 $this->serverName               = ErrorHandler::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
 
-                $this->clearAllBuffers          = ErrorHandler::optionsPop( $options, 'clear_all_buffers', false);
+                $this->clearAllBuffers          = ErrorHandler::optionsPop( $options, 'clear_all_buffers', true);
 
                 /*
                  * Relative paths might be given for document root,
