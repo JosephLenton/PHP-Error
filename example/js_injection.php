@@ -1,6 +1,6 @@
 <?php
-    session_start();
-    $_SESSION['DKDKDK']='something';
+		session_start();
+		$_SESSION['DKDKDK']='something';
 ?><!DOCTYPE html>
 <?php
 	require( dirname(__FILE__) . '/../src/php_error.php' );

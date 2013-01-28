@@ -38,10 +38,10 @@ Getting Started
  * call \php_error\reportErrors()
 
 ```php
-    <?php
-        require( 'php_error.php' );
-        \php_error\reportErrors();
-    ?>
+		<?php
+				require( 'php_error.php' );
+				\php_error\reportErrors();
+		?>
 ```
 
 Documentation
@@ -73,7 +73,7 @@ Advanced Features
  * run specific sections without error reporting
  * ignore files allowing you to avoid highlighting code in your stack trace
  * application files; these are prioritized when an error strikes!
- 
+
 ![Application Aware Stack Trace](http://i.imgur.com/qdwnb.png)
 
 
