@@ -2357,6 +2357,11 @@
              */
             public function reportError( $code, $message, $errLine, $errFile, $ex=null ) {
                 $this->discardBuffer();
+                /*
+                 * Turning off 'html_errors' at this point avoids interference
+                 * with xDebugs 'var_dump()'-overload, thus preserving prettyfied dumps
+                 */
+                @ini_set( 'html_errors', false );
 
                 if (
                         $ex === null &&
@@ -2641,7 +2646,6 @@
 
                     // all errors \o/ !
                     error_reporting( $this->defaultErrorReportingOn );
-                    @ini_set( 'html_errors', false );
 
                     if ( ErrorHandler::isIIS() ) {
                         @ini_set( 'log_errors', false );
