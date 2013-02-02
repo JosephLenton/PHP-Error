@@ -1290,6 +1290,15 @@
                 $this->startBuffer();
             }
 
+            /** 
+             * Returns current global handler, or null if there is none.
+             * 
+             * @return ErrorHandler */
+            public static function globalHandler() {
+                global $_php_error_global_handler;
+                return $_php_error_global_handler;
+            }
+            
             /*
              * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
              * Public Functions
