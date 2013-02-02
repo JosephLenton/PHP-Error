@@ -164,7 +164,6 @@
             $_php_error_is_ini_enabled = 
                     ! @get_cfg_var( 'php_error.force_disabled' ) &&
                     ! @get_cfg_var( 'php_error.force_disable'  ) &&
-                      @ini_get('display_errors') === '1'         &&
                        PHP_SAPI !== 'cli'
             ;
         }
@@ -1329,6 +1328,10 @@
                 return $this;
             }
 
+            public function isDisplayingErrors() {
+                return ini_get('display_errors') === '1';
+            }
+            
             /**
              * Allows you to run a callback with strict errors turned off.
              * Standard errors still apply, but this will use the default
@@ -1499,6 +1502,7 @@
             public function endBuffer() {
                 if ( $this->isBufferSetup ) {
                     $content  = ob_get_contents();
+                    
                     $handlers = ob_list_handlers();
 
                     $wasGZHandler = false;
@@ -1526,6 +1530,7 @@
                     }
 
                     if ( 
+                            $this->isDisplayingErrors() &&
                             !$this->isAjax &&
                              $this->catchAjaxErrors &&
                             (!$this->htmlOnly || !ErrorHandler::isNonPHPRequest())
@@ -2359,68 +2364,76 @@
                  * It runs if:
                  *  - it is globally enabled
                  *  - this error handler is enabled
-                 *  - we believe it is a regular html request, or ajax
                  */
                 global $_php_error_is_ini_enabled;
                 if (
                         $_php_error_is_ini_enabled &&
-                        $this->isOn() && (
+                        $this->isOn() 
+                ) {
+                    
+                    /**
+                     * Error is displayed if:
+                     *  - display_errors is 1
+                     *  - we believe it is a regular html request, or ajax
+                     */
+                    if ($this->isDisplayingErrors() && (
                                 $this->isAjax ||
                                 !$this->htmlOnly ||
                                 !ErrorHandler::isNonPHPRequest()
                         )
-                ) {
-                    $root = $this->applicationRoot;
+                    ) {
+                        $root = $this->applicationRoot;
 
-                    list( $ex, $stackTrace, $code, $errFile, $errLine ) =
-                            $this->getStackTrace( $ex, $code, $errFile, $errLine );
+                        list( $ex, $stackTrace, $code, $errFile, $errLine ) =
+                                $this->getStackTrace( $ex, $code, $errFile, $errLine );
 
-                    list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
-                            $this->improveErrorMessage(
-                                    $ex,
-                                    $code,
-                                    $message,
-                                    $errLine,
-                                    $errFile,
-                                    $root,
-                                    $stackTrace
-                            );
+                        list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
+                                $this->improveErrorMessage(
+                                        $ex,
+                                        $code,
+                                        $message,
+                                        $errLine,
+                                        $errFile,
+                                        $root,
+                                        $stackTrace
+                                );
 
-                    $errFile = $srcErrFile;
-                    $errLine = $srcErrLine;
+                        $errFile = $srcErrFile;
+                        $errLine = $srcErrLine;
 
-                    list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
+                        list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
-                    list( $type, $errFile ) = $this->getFolderType( $root, $errFile );
-                    $errFileType = ErrorHandler::folderTypeToCSS( $type );
+                        list( $type, $errFile ) = $this->getFolderType( $root, $errFile );
+                        $errFileType = ErrorHandler::folderTypeToCSS( $type );
 
-                    $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
-                    $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
+                        $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
+                        $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
-                    // load the session, if it's there
+                        // load the session, if it's there
 
-                    if ( isset($_COOKIE[session_name()]) && session_id() !== '' &&  !isset($_SESSION)) {
-                        session_start();
+                        if ( isset($_COOKIE[session_name()]) && session_id() !== '' &&  !isset($_SESSION)) {
+                            session_start();
+                        }
+
+                        $request  = ErrorHandler::getRequestHeaders();
+                        $response = ErrorHandler::getResponseHeaders();
+
+                        $dump = $this->generateDumpHTML(
+                                array(
+                                        'post'    => ( isset($_POST)    ? $_POST    : array() ),
+                                        'get'     => ( isset($_GET)     ? $_GET     : array() ),
+                                        'session' => ( isset($_SESSION) ? $_SESSION : array() ),
+                                        'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() )
+                                ),
+
+                                $request,
+                                $response,
+
+                                $_SERVER
+                        );
+                        $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
                     }
-
-                    $request  = ErrorHandler::getRequestHeaders();
-                    $response = ErrorHandler::getResponseHeaders();
-
-                    $dump = $this->generateDumpHTML(
-                            array(
-                                    'post'    => ( isset($_POST)    ? $_POST    : array() ),
-                                    'get'     => ( isset($_GET)     ? $_GET     : array() ),
-                                    'session' => ( isset($_SESSION) ? $_SESSION : array() ),
-                                    'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() )
-                            ),
-
-                            $request,
-                            $response,
-
-                            $_SERVER
-                    );
-                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
-
+                    
                     // exit in order to end processing
                     $this->turnOff();
                     exit(0);
