@@ -164,8 +164,7 @@
             $_php_error_is_ini_enabled = 
                     ! @get_cfg_var( 'php_error.force_disabled' ) &&
                     ! @get_cfg_var( 'php_error.force_disable'  ) &&
-                      @ini_get('display_errors') === '1'         &&
-                       PHP_SAPI !== 'cli'
+                      @ini_get('display_errors') === '1'
             ;
         }
 
@@ -542,6 +541,10 @@
                                 isset($_SERVER['_FCGI_X_PIPE_']) &&
                                 strpos($_SERVER['_FCGI_X_PIPE_'], 'IISFCGI') !== false
                         );
+            }
+
+            public static function isCLI() {
+                return PHP_SAPI === 'cli';
             }
             
             /**
@@ -1231,7 +1234,7 @@
                 $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off', error_reporting() );
 
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
-                $this->serverName               = ErrorHandler::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
+                $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name', isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : null  );
 
                 /*
                  * Relative paths might be given for document root,
@@ -1429,15 +1432,17 @@
                 if ( $_php_error_is_ini_enabled && !$this->isBufferSetup ) {
                     $this->isBufferSetup = true;
 
-                    ini_set( 'implicit_flush', false );
-                    ob_implicit_flush( false );
+                    if (self::isCLI() == false) {
+                        ini_set( 'implicit_flush', false );
+                        ob_implicit_flush( false );
 
-                    if ( ! @ini_get('output_buffering') ) {
-                        @ini_set( 'output_buffering', 'on' );
+                        if ( ! @ini_get('output_buffering') ) {
+                            @ini_set( 'output_buffering', 'on' );
+                        }
+
+                        ob_start();
                     }
-
-                    ob_start();
-
+                        
                     $self = $this;
                     register_shutdown_function( function() use ( $self ) {
                         $self->__onShutdown();
@@ -1454,7 +1459,7 @@
              * do want it. However otherwise, it will be lost.
              */
             private function discardBuffer($return = false) {
-                if (!$this->isBufferSetup) return false;
+                if (!$this->isBufferSetup || self::isCLI()) return false;
                 
                 $content  = ob_get_contents();
                 $handlers = ob_list_handlers();
@@ -1494,7 +1499,7 @@
              * then this will do nothing (as no buffering will take place).
              */
             public function endBuffer() {
-                if ( $this->isBufferSetup ) {
+                if ( $this->isBufferSetup && self::isCLI() == false ) {
 
                     if ( 
                             !$this->isAjax &&
@@ -2353,7 +2358,7 @@
 
                     list( $ex, $stackTrace, $code, $errFile, $errLine ) =
                             $this->getStackTrace( $ex, $code, $errFile, $errLine );
-
+                    
                     list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
                             $this->improveErrorMessage(
                                     $ex,
@@ -2368,6 +2373,12 @@
                     $errFile = $srcErrFile;
                     $errLine = $srcErrLine;
 
+                    if (self::isCLI()) {
+                        // it is not needed, since PHP will print out to stderr. maybe later...
+                        //$this->displayCLIError($message, $errFile, $errLine, $stackTrace);
+                        exit($code);
+                    }
+                    
                     list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
                     list( $type, $errFile ) = $this->getFolderType( $root, $errFile );
@@ -2402,7 +2413,7 @@
 
                     // exit in order to end processing
                     $this->turnOff();
-                    exit(0);
+                    exit($code);
                 }
             }
 
@@ -3109,6 +3120,27 @@
                 </script><?php
             }
 
+            private function displayCLIError($message, $errFile, $errLine, $stackTrace) {
+                $unhtml = function($html) {
+                    return html_entity_decode( preg_replace('/<.+?>/', '', $html) );
+                };
+                $message = $unhtml($message);
+                
+                echo "\n\n-----------------------------------------------------------\n";
+                echo "$message\n";
+                foreach($stackTrace as $i => $stack) {
+                    echo "\t #$i ";
+                    if (isset($stack['file'])) {
+                        echo $stack['file'];
+                        if (isset($stack['line'])) echo "(", $stack['line'], ")";
+                        echo ": ";
+                    }
+                    if (isset($stack['class'])) echo $stack['class'], "::";
+                    if (isset($stack['function'])) echo $stack['function'], "()";
+                    echo "\n";
+                }                
+            }
+            
             /**
              * The actual display logic.
              * This outputs the error details in HTML.
