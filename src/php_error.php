@@ -1521,6 +1521,8 @@
                         echo $content;
                     }
 
+                    ob_end_clean();
+                    
                 }
             }
 
