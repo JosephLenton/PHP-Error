@@ -529,6 +529,10 @@
                     'application/xhtml+xml'
             );
 
+            protected static $ALLOWED_OUTPUT_BUFFERS = array(
+                'ob_gzhandler', 'zlib output compression'
+            );
+            
             private static function isIIS() {
                 return (
                                 isset($_SERVER['SERVER_SOFTWARE']) &&
@@ -1284,8 +1288,6 @@
                         );
 
                 $this->isBufferSetup = false;
-                $this->bufferOutputStr = '';
-                $this->bufferOutput = false;
 
                 $this->startBuffer();
             }
@@ -1459,22 +1461,7 @@
                         @ini_set( 'output_buffering', 'on' );
                     }
 
-                    $output = '';
-                    $bufferOutput = true;
-
-                    $this->bufferOutputStr  = &$output;
-                    $this->bufferOutput = &$bufferOutput;
-
-                    ob_start( function($string) use (&$output, &$bufferOutput) {
-                        if ( $bufferOutput ) {
-                            $output .= $string;
-                            return '';
-                        } else {
-                            $temp = $output . $string;
-                            $output = '';
-                            return $temp;
-                        }
-                    });
+                    ob_start();
 
                     $self = $this;
                     register_shutdown_function( function() use ( $self ) {
@@ -1484,33 +1471,43 @@
             }
 
             /**
-             * Turns off buffering, and discards anything buffered
-             * so far.
+             * Discards anything buffered so far.
+             * 
+             * Will preserve output compression handlers.
              * 
              * This will return what has been buffered incase you
              * do want it. However otherwise, it will be lost.
              */
-            private function discardBuffer() {
-                $str = $this->bufferOutputStr;
+            private function discardBuffer($return = false) {
+                if (!$this->isBufferSetup) return false;
+                
+                $content  = ob_get_contents();
+                $handlers = ob_list_handlers();
+                
+                /* Flushing buffers may result in errors, so lets get their contents
+                 * in reverse order... */
+                $content = false;
+                for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
+                    $handler = $handlers[$i];
 
-                $this->bufferOutputStr = '';
-                $this->bufferOutput = false;
-
-                return $str;
+                    if ( in_array($handler, self::$ALLOWED_OUTPUT_BUFFERS) ) {
+                        // these buffers are safe to stay...
+                        break;
+                    } else {
+                        if ($return) {
+                            $content = ob_get_clean() . $content;
+                        } else {
+                            ob_end_clean();
+                        }
+                    }
+                }                
+                
+                // restart buffering
+                ob_start();
+                
+                return $content;
             }
 
-            /**
-             * Flushes the internal buffer,
-             * outputting what is left.
-             * 
-             * @param append Optional, extra content to append onto the output buffer.
-             */
-            private function flushBuffer() {
-                $temp = $this->bufferOutputStr;
-                $this->bufferOutputStr = '';
-
-                return $temp;
-            }
 
             /**
              * This will finish buffering, and output the page.
@@ -1523,33 +1520,7 @@
              */
             public function endBuffer() {
                 if ( $this->isBufferSetup ) {
-                    $content  = ob_get_contents();
                     
-                    $handlers = ob_list_handlers();
-
-                    $wasGZHandler = false;
-
-                    $this->bufferOutput = true;
-                    for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
-                        $handler = $handlers[$i];
-
-                        if ( $handler === 'ob_gzhandler' ) {
-                            $wasGZHandler = true;
-                            ob_end_clean();
-                        } else if ( $handler === 'default output handler' ) {
-                            ob_end_clean();
-                        } else {
-                            ob_end_flush();
-                        }
-                    }
-
-                    $content = $this->discardBuffer();
-
-                    if ( $wasGZHandler ) {
-                        ob_start('ob_gzhandler');
-                    } else {
-                        ob_start();
-                    }
 
                     if ( 
                             $this->isDisplayingErrors() &&
@@ -1557,6 +1528,9 @@
                              $this->catchAjaxErrors &&
                             (!$this->htmlOnly || !ErrorHandler::isNonPHPRequest())
                     ) {
+                        $content  = ob_get_contents();
+                        ob_clean();
+                        
                         $js = $this->getContent( 'displayJSInjection' );
                         $js = JSMin::minify( $js );
 
@@ -1570,11 +1544,12 @@
                         } else {
                             echo $js;
                         }
+                        
+                        echo $content;
                     }
-                    
-                    ob_end_flush();
 
-                    echo $content;
+                    ob_end_clean();
+                    
                 }
             }
 
@@ -2364,7 +2339,6 @@
              * more than that.
              */
             public function reportError( $code, $message, $errLine, $errFile, $ex=null ) {
-                $this->discardBuffer();
 
                 if (
                         $ex === null &&
@@ -2415,6 +2389,9 @@
                                 !ErrorHandler::isNonPHPRequest()
                         )
                     ) {
+                    
+                    $outputSoFar = $this->discardBuffer(true);
+                    
                         $root = $this->applicationRoot;
 
                         list( $ex, $stackTrace, $code, $errFile, $errLine ) =
@@ -2464,7 +2441,7 @@
 
                                 $_SERVER
                         );
-                        $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
+                        $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump, $outputSoFar );
                         
                     } elseif ( $this->errorPage &&
                                 !$this->isDisplayingErrors() && 
@@ -3227,7 +3204,7 @@
              * The actual display logic.
              * This outputs the error details in HTML.
              */
-            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
+            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo, $outputSoFar ) {
                 $applicationRoot   = $this->applicationRoot;
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
@@ -3266,7 +3243,7 @@
                                 $message, $errLine, $errFile, $errFileType, $stackTrace,
                                 &$fileLinesSets, $numFileLines,
                                 $displayLineNumber,
-                                $dumpInfo
+                                $dumpInfo, $outputSoFar
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -3334,9 +3311,18 @@
                             if ( $stackTrace !== null ) {
                                 echo $stackTrace;
                             }
-
+                            
                             if ( $dumpInfo !== null ) {
                                 echo $dumpInfo;
+                            }
+                            
+                            if ($outputSoFar) {
+                                ?>
+                                <h2 id="error-output-title">output</h2>
+                                <div id="error-output">
+                                    <?php echo htmlspecialchars($outputSoFar) ?>
+                                </div>
+                                <?php
                             }
                         },
 
@@ -3895,7 +3881,22 @@
                             white-space: normal;
                             max-width: 100%;
                         }
-                        
+                    <?php
+                    /*
+                     * Output dump
+                     */
+                    ?>            
+                        #error-output-title {
+                            color: #eb4;
+                            margin-top:40px;
+                        }
+                        #error-output {
+                            color: #ddd;
+                            white-space: pre-wrap;
+                            border-left: 2px solid #7C9D5D;
+                            border-right: 2px solid #7C9D5D;
+                            padding: 10px;                            
+                        }
                     <?php
                     /*
                      * Code and Stack highlighting colours
