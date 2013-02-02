@@ -1134,6 +1134,8 @@
 
             private $classNotFoundException;
 
+            private $errorPage;
+            
             /**
              * = Options =
              * 
@@ -1187,6 +1189,9 @@
              *                              If this is false, then it will also run when on non-HTML
              *                              pages too, such as replying with images of JavaScript
              *                              from your PHP. Defaults to true.
+             * 
+             *  - error_page                Error page to show if display_errors is disabled.
+             *                              Should be an absolute path to .html or .php file
              * 
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
@@ -1248,6 +1253,8 @@
                 $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
 
                 $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
+                
+                $this->errorPage                = ErrorHandler::optionsPop( $options, 'error_page', false );
 
                 $this->classNotFoundException   = null;
 
@@ -2437,6 +2444,24 @@
                                 $_SERVER
                         );
                         $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
+                        
+                    } elseif ( $this->errorPage &&
+                                !$this->isDisplayingErrors() && 
+                                !$this->isAjax &&
+                                (
+                                    !$this->htmlOnly ||
+                                    !ErrorHandler::isNonPHPRequest()
+                                )
+                    ) {
+                        if ( file_exists($this->errorPage) ) {
+                            if (substr($this->errorPage, -4) === '.php' ) {
+                                include($this->errorPage);
+                            } else {
+                                readfile($this->errorPage);
+                            }
+                        } else {
+                            echo '!';
+                        }
                     }
                     
                     // exit in order to end processing
