@@ -1549,6 +1549,8 @@
                             echo $js;
                         }
                     }
+                    
+                    ob_end_flush();
 
                     echo $content;
                 }
