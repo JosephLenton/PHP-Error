@@ -1454,7 +1454,8 @@
              * do want it. However otherwise, it will be lost.
              */
             private function discardBuffer($return = false) {
-
+                if (!$this->isBufferSetup) return false;
+                
                 $content  = ob_get_contents();
                 $handlers = ob_list_handlers();
                 
