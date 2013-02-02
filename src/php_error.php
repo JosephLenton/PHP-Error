@@ -1135,6 +1135,7 @@
 
             private $classNotFoundException;
 
+            private $throwErrors;
             private $callbacks = array();
             
             /**
@@ -1190,6 +1191,9 @@
              *                              If this is false, then it will also run when on non-HTML
              *                              pages too, such as replying with images of JavaScript
              *                              from your PHP. Defaults to true.
+             * 
+             *  - throw_errors              By default, PHP Error will stop execution on trigerred errors.
+             *                              You can enabled it to throw errors instead.
              * 
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
@@ -1251,6 +1255,8 @@
                 $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
 
                 $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
+                
+                $this->throwErrors              = !! ErrorHandler::optionsPop( $options, 'throw_errors', false );
 
                 $this->classNotFoundException   = null;
 
@@ -2679,8 +2685,11 @@
                                      */
                                     if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
                                         $ex = new ErrorException( $message, $code, $code, $file, $line );
-
-                                        $self->reportException( $ex );
+                                        if ($self->throwErrors) {
+                                            throw $ex;
+                                        } else {
+                                            $self->reportException( $ex );
+                                        }
                                     }
                                 } else {
                                     return false;
