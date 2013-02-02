@@ -1526,7 +1526,7 @@
                         echo $content;
                     }
 
-                    ob_end_clean();
+                    ob_end_flush();
                     
                 }
             }
