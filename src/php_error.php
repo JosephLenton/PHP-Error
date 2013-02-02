@@ -2347,7 +2347,7 @@
                         )
                 ) {
                     
-                    $this->discardBuffer();
+                    $outputSoFar = $this->discardBuffer(true);
                     
                     $root = $this->applicationRoot;
 
@@ -2398,7 +2398,7 @@
 
                             $_SERVER
                     );
-                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
+                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump, $outputSoFar );
 
                     // exit in order to end processing
                     $this->turnOff();
@@ -3113,7 +3113,7 @@
              * The actual display logic.
              * This outputs the error details in HTML.
              */
-            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
+            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo, $outputSoFar ) {
                 $applicationRoot   = $this->applicationRoot;
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
@@ -3152,7 +3152,7 @@
                                 $message, $errLine, $errFile, $errFileType, $stackTrace,
                                 &$fileLinesSets, $numFileLines,
                                 $displayLineNumber,
-                                $dumpInfo
+                                $dumpInfo, $outputSoFar
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -3220,9 +3220,18 @@
                             if ( $stackTrace !== null ) {
                                 echo $stackTrace;
                             }
-
+                            
                             if ( $dumpInfo !== null ) {
                                 echo $dumpInfo;
+                            }
+                            
+                            if ($outputSoFar) {
+                                ?>
+                                <h2 id="error-output-title">output</h2>
+                                <div id="error-output">
+                                    <?php echo htmlspecialchars($outputSoFar) ?>
+                                </div>
+                                <?php
                             }
                         },
 
@@ -3781,7 +3790,22 @@
                             white-space: normal;
                             max-width: 100%;
                         }
-                        
+                    <?php
+                    /*
+                     * Output dump
+                     */
+                    ?>            
+                        #error-output-title {
+                            color: #eb4;
+                            margin-top:40px;
+                        }
+                        #error-output {
+                            color: #ddd;
+                            white-space: pre-wrap;
+                            border-left: 2px solid #7C9D5D;
+                            border-right: 2px solid #7C9D5D;
+                            padding: 10px;                            
+                        }
                     <?php
                     /*
                      * Code and Stack highlighting colours
