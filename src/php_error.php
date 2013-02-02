@@ -2371,6 +2371,9 @@
                         $this->isOn() 
                 ) {
                     
+                    /* Every broken page should have status 500 */
+                    header('HTTP/1.1 500 Internal Server Error');
+                    
                     /**
                      * Error is displayed if:
                      *  - display_errors is 1
