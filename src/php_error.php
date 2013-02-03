@@ -1135,6 +1135,10 @@
 
             private $classNotFoundException;
 
+            private $errorLog;
+            private $errorLogFormat;
+            private $errorLogTimeFormat;
+            
             /**
              * = Options =
              * 
@@ -1188,6 +1192,23 @@
              *                              If this is false, then it will also run when on non-HTML
              *                              pages too, such as replying with images of JavaScript
              *                              from your PHP. Defaults to true.
+             * 
+             *  - error_log                 Defines where to log messages.
+             *                              FALSE - disables logging
+             *                              0 - logs to the syslog, equivalent of php's error_log($message, 0) (default)
+             *                              absolute path - logs to the provided file path, equivalent of php's error_log($message, 3, $path)
+             *                              email - sends an email, equivalent of php's error_log($message, 1, $email)
+             * 
+             *  - error_log_format          Format of log messages with printf() directives.
+             *                              %1$s - timestamp (empty if error_log is set to 0, because syslog is using it's own timestamp)
+             *                              %2$s - error message
+             *                              %3$s - file
+             *                              %4$s - line
+             *                              %5$s - stack trace (starts on the newline and is indented)
+             *                              Defaults to "%s%s\n           %s, %s %s"
+             *                              
+             *  - error_log_time_format     Format of log's timestamp compatible with strftime()
+             *                              Defaults to "[%c] "
              * 
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
@@ -1249,6 +1270,10 @@
                 $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
 
                 $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
+                
+                $this->errorLog                 = ErrorHandler::optionsPop( $options, 'error_log', 0 );
+                $this->errorLogFormat           = ErrorHandler::optionsPop( $options, 'error_log_format', "%s%s\n           %s, %s %s");
+                $this->errorLogTimeFormat       = ErrorHandler::optionsPop( $options, 'error_log_time_format', '[%c] ' );
 
                 $this->classNotFoundException   = null;
 
@@ -2284,17 +2309,25 @@
             }
 
             private function logError( $message, $file, $line, $ex=null ) {
+                if ($this->errorLog === false || !$this->errorLogFormat) return;
+                
+                $string = "";
+                $trace = "";
                 if ( $ex ) {
                     $trace = $ex->getTraceAsString();
                     $parts = explode( "\n", $trace );
-                    $trace = "        " . join( "\n        ", $parts );
-
-                    if ( ! ErrorHandler::isIIS() ) {
-                        error_log( "$message \n           $file, $line \n$trace" );
-                    }
-                } else {
-                    if ( ! ErrorHandler::isIIS() ) {
-                        error_log( "$message \n           $file, $line" );
+                    $trace = PHP_EOL . "        " . join( PHP_EOL . "        ", $parts );
+                }
+                $string = sprintf($this->errorLogFormat, $this->errorLog !== 0 ? strftime($this->errorLogTimeFormat) : '', $message, $file, $line, $trace);
+                if ($this->errorLog) $string .= PHP_EOL;
+                
+                if ( ! ErrorHandler::isIIS() ) {
+                    if (is_numeric($this->errorLog)) {
+                        error_log( $string, $this->errorLog );
+                    } elseif (dirname($this->errorLog) && is_dir(dirname($this->errorLog))) {
+                        error_log( $string, 3, $this->errorLog);
+                    } elseif (strpos($this->errorLog, '@') > 0) {
+                        error_log( $string, 1, $this->errorLog );
                     }
                 }
             }
