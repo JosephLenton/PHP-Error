@@ -1483,7 +1483,7 @@
              * This will return what has been buffered incase you
              * do want it. However otherwise, it will be lost.
              */
-            private function discardBuffer($return = false) {
+            public function discardBuffer($return = false) {
                 if (!$this->isBufferSetup || self::isCLI()) return false;
                 
                 $content  = ob_get_contents();
@@ -2383,6 +2383,8 @@
                     /* Every broken page should have status 500 */
                     header('HTTP/1.1 500 Internal Server Error');
                     
+                    $outputSoFar = $this->discardBuffer(true);
+                    
                     /**
                      * Error is displayed if:
                      *  - display_errors is 1
@@ -2394,8 +2396,6 @@
                                 !ErrorHandler::isNonPHPRequest()
                         )
                     ) {
-                    
-                    $outputSoFar = $this->discardBuffer(true);
                     
                         $root = $this->applicationRoot;
 
@@ -2416,11 +2416,11 @@
                         $errFile = $srcErrFile;
                         $errLine = $srcErrLine;
 
-                    if (self::isCLI()) {
-                        // it is not needed, since PHP will print out to stderr. maybe later...
-                        //$this->displayCLIError($message, $errFile, $errLine, $stackTrace);
-                        exit($code);
-                    }
+                        if (self::isCLI()) {
+                            // it is not needed, since PHP will print out to stderr. maybe later...
+                            //$this->displayCLIError($message, $errFile, $errLine, $stackTrace);
+                            exit($code);
+                        }
                     
                         list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
 
