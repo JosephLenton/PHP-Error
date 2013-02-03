@@ -4091,20 +4091,11 @@
          
         /**
          * This is a carbon copy of \ErrorException.
-         * However that is only supported in PHP 5.1 and above,
-         * so this allows PHP Error to work in PHP 5.0.
-         *
-         * A thin class that wraps up an error, into an exception.
+         * As php_error requires now PHP 5.3, it's left in case anybody tries to catch this
+         * exception class.
          */
-        class ErrorException extends Exception
-        {
-            public function __construct( $message, $code, $severity, $file, $line )
-            {
-                parent::__construct( $message, $code, null );
+        class ErrorException extends \ErrorException {
 
-                $this->file = $file;
-                $this->line = $line;
-            }
         }
 
         /**
