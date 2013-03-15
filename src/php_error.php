@@ -2402,9 +2402,11 @@
                     $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
                     $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
 
-                    // load the session, if it's there
-
-                    if ( isset($_COOKIE[session_name()]) && session_id() !== '' &&  !isset($_SESSION)) {
+                    // load the session, if ...
+                    //  - there *is* a session cookie to load
+                    //  - the session has not yet been started
+                    // Do not start the session without he cookie, because there may be no session ever.
+                    if ( isset($_COOKIE[session_name()]) && session_id() === '' ) {
                         session_start();
                     }
 
