@@ -1232,11 +1232,11 @@
                     ErrorHandler::setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
                 }
 
-                $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on' , -1 );
-                $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off', error_reporting() );
+                $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on'  , -1                        );
+                $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off' , error_reporting()         );
 
-                $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
-                $this->serverName               = ErrorHandler::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
+                $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'    , $_SERVER['DOCUMENT_ROOT'] );
+                $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name'         , $_SERVER['SERVER_NAME']   );
 
                 /*
                  * Relative paths might be given for document root,
