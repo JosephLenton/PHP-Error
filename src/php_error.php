@@ -2551,7 +2551,7 @@
                 $srcErrID = "file-line-$fileLineID";
                 $fileLineID++;
 
-                $lines = $this->readCodeFile( $srcErrFile, $srcErrLine );
+                $lines = $this->getFileContents( $srcErrFile );
                 $minSize = count( $lines );
                 $fileLinesSets = array( new FileLinesSet( $srcErrLine, $srcErrID, $lines, true ) );
 
@@ -2567,7 +2567,7 @@
                                 $traceFileID = "file-line-$fileLineID";
                                 $trace['file-lines-id'] = $traceFileID;
 
-                                $lines = $this->readCodeFile( $file, $line );
+                                $lines = $this->getFileContents( $file );
                                 $minSize = max( $minSize, count($lines) );
                                 $fileLinesSets[]= new FileLinesSet( $line, $traceFileID, $lines, false );
 
@@ -3223,7 +3223,8 @@
 
                                 <?php
                                     foreach ( $fileLinesSets as $i => $fileLinesSet ) {
-                                        ?><div data-line="<?= $i ?>" class="error-editor-file"><?= htmlentities( $fileLinesSet->getContent() ) ?></div><?php
+                                        $highlightLine = $fileLinesSet->getLine();
+                                        ?><div data-file="<?= $i ?>" data-line="<?= $highlightLine ?>" class="error-editor-file"><?= htmlentities( $fileLinesSet->getContent() ) ?></div><?php
                                     }
                                 ?>
 <?php if ( false ) { ?>
@@ -3303,7 +3304,7 @@
                                         var editor = ace.edit( $editor.get(0) );
                                         editor.setTheme( 'ace/theme/twilight' );
 
-                                        var selectFile = function( i ) {
+                                        var selectFile = function( i, line ) {
                                             setTimeout( function() {
                                                 var file = files.get(i);
 
@@ -3314,6 +3315,7 @@
                                                     }
 
                                                     editor.setSession( file.__ace_session );
+                                                    editor.gotoLine( $(file).attr('data-line') );
                                                     editor.focus();
                                                 }
                                             }, 0 );
@@ -3322,7 +3324,8 @@
                                         selectFile( 0 );
 
                                         $('.error-editor-link').click( function() {
-                                            selectFile( $(this).attr('data-file-id') );
+                                            var $this = $(this);
+                                            selectFile( $this.attr('data-file-id'), $this.attr('data-line') );
                                         } );
                                     }
 
@@ -3751,9 +3754,11 @@
 
                     #error-editor {
                         width: 100%;
-                        height: 300px;
+                        height: 400px;
 
                         position: relative;
+                        
+                        margin: 36px 0;
                     }
                         #error-editor-ace {
                             top: 0;
