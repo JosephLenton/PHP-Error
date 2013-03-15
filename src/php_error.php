@@ -544,9 +544,10 @@
 
             private static function isBinaryRequest() {
                 $response = ErrorHandler::getResponseHeaders();
+
                 foreach ( $response as $key => $value ) {
                     if ( strtolower($key) === 'content-transfer-encoding' ) {
-                      return strtolower($value) === 'binary';
+                        return strtolower($value) === 'binary';
                     }
                 }
             }
@@ -563,28 +564,24 @@
             private static function isNonPHPRequest() {
                 /*
                  * Check if we are a mime type that isn't allowed.
+                 * 
+                 * If an allowed type is found, then we return false,
+                 * as were are a PHP Request.
                  *
-                 * Anything other than 'text/html' or similar will cause
-                 * this to turn off.
+                 * Anything else found, returns true, as that means
+                 * we are dealing with something unknown.
                  */
                 $response = ErrorHandler::getResponseHeaders();
 
                 foreach ( $response as $key => $value ) {
                     if ( strtolower($key) === 'content-type' ) {
-                        $found = true;
-
                         foreach ( ErrorHandler::$ALLOWED_RETURN_MIME_TYPES as $type ) {
                             if ( stripos($value, $type) !== false ) {
-                                $found = true;
-                                break;
+                                return false;
                             }
                         }
 
-                        if ( ! $found ) {
-                            return true;
-                        }
-
-                        break;
+                        return true;
                     }
                 }
 
@@ -3571,6 +3568,7 @@
                             }
 
                     #error-title {
+                        margin-top: 6px;
                         position: relative;
                         white-space: pre-wrap;
                     }
@@ -3716,11 +3714,11 @@
 
                     #error-editor {
                         width: 100%;
-                        height: 500px;
+                        height: 450px;
 
                         position: relative;
                         
-                        margin: 36px 0;
+                        margin: 0 0 36px 0;
                     }
                         #error-editor-ace {
                             top: 0;
