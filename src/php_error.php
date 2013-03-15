@@ -1258,7 +1258,7 @@
                     $this->defaultErrorReportingOn = E_ERROR | E_WARNING | E_PARSE | E_USER_DEPRECATED & ~E_DEPRECATED & ~E_STRICT;
                 }
 
-                concrete5 = ErrorHandler::optionsPop( $options, 'concrete5', false );
+                $concrete5 = ErrorHandler::optionsPop( $options, 'concrete5', false );
                 if ( $concrete5 ) {
                     $this->defaultErrorReportingOn = E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED;
                 } 
