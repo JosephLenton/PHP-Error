@@ -1112,6 +1112,7 @@
 
             private $isShutdownRegistered;
             private $isOn;
+            private $allowManualReport;
 
             private $ignoreFolders = array();
             private $ignoreFoldersLongest = 0;
@@ -1198,6 +1199,9 @@
              *                              pages too, such as replying with images of JavaScript
              *                              from your PHP. Defaults to true.
              *
+             *  - allow_manual_report       Allows the reportException() and reportError() functions to run even when isOff().
+             *                              Defaults to false.
+             *
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
              */
@@ -1260,6 +1264,8 @@
                 $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
 
                 $this->classNotFoundException   = null;
+
+                $this->allowManualReport        = !! ErrorHandler::optionsPop( $options, 'allow_manual_report', false );
 
                 $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
                 if ( $wordpress ) {
@@ -2379,7 +2385,7 @@
                 global $_php_error_is_ini_enabled;
                 if (
                         $_php_error_is_ini_enabled &&
-                        $this->isOn() && (
+                        ($this->isOn() || $this->allowManualReport) && (
                                 $this->isAjax ||
                                 !$this->htmlOnly ||
                                 !ErrorHandler::isNonPHPRequest()
