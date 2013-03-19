@@ -1,8 +1,8 @@
 {
-	"name": "joseph-lenton/php-error",
+	"name": "bradfeehan/php-error",
 	"description": "Better error reporting for PHP, and prettier too!",
 	"version": "1.0.0",
-	"homepage": "https://github.com/JosephLenton/PHP-Error",
+	"homepage": "https://github.com/bradfeehan/PHP-Error",
 	"license": "BSD-3-Clause",
 	"require": {
 		"php": ">=5.3.0"
@@ -10,7 +10,7 @@
 	"repositories": [
 		{
 			"type": "git",
-			"url": "https://github.com/JosephLenton/PHP-Error"
+			"url": "https://github.com/bradfeehan/PHP-Error"
 		}
 	],
 	"keywords": [
@@ -22,6 +22,11 @@
 		{
 			"name": "Joseph Lenton",
 			"homepage": "http://www.playmycode.com",
+			"role": "Developer"
+		},
+		{
+			"name": "Brad Feehan",
+			"homepage": "https://github.com/bradfeehan",
 			"role": "Developer"
 		}
 	],
