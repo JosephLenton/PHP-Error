@@ -2288,8 +2288,8 @@
                             }
 
                             $data = '';
-                            if ( isset($trace['file-lines-id']) ) {
-                                $data = ' data-file-lines-id="' . $trace['file-lines-id'] . '"' .
+                            if ( isset($trace['file-id']) ) {
+                                $data = ' data-file-id="' . $trace['file-id'] . '"' .
                                             ' data-line="' . $line . '"' ;
                             }
 
@@ -2549,9 +2549,13 @@
                 $srcErrID = "file-line-$fileLineID";
                 $fileLineID++;
 
+
                 $lines = $this->getFileContents( $srcErrFile );
                 $minSize = count( $lines );
-                $fileLinesSets = array( new FileLinesSet( $srcErrLine, $srcErrID, $lines, true ) );
+
+                $srcFileSet = new FileLinesSet( $srcErrFile, $srcErrID, $lines );
+
+                $seenFiles = array( $srcErrFile => $srcFileSet );
 
                 if ( $stackTrace ) {
                     foreach ( $stackTrace as $i => &$trace ) {
@@ -2559,23 +2563,26 @@
                             $file = $trace['file'];
                             $line = $trace['line'];
 
-                            if ( $file === $srcErrFile && $line === $srcErrLine ) {
-                                $trace['file-lines-id'] = $srcErrID;
+                            if ( isset($seenFiles[$file]) ) {
+                                $fileSet = $seenFiles[$file];
                             } else {
                                 $traceFileID = "file-line-$fileLineID";
-                                $trace['file-lines-id'] = $traceFileID;
 
                                 $lines = $this->getFileContents( $file );
                                 $minSize = max( $minSize, count($lines) );
-                                $fileLinesSets[]= new FileLinesSet( $line, $traceFileID, $lines, false );
+                                $fileSet = new FileLinesSet( $file, $traceFileID, $lines );
+
+                                $seenFiles[ $file ] = $fileSet;
 
                                 $fileLineID++;
                             }
+
+                            $trace['file-id'] = $fileSet->getHTMLID();
                         }
                     }
                 }
 
-                return array( $fileLinesSets, $minSize );
+                return array( array_values($seenFiles), $minSize );
             }
 
             /*
@@ -3226,7 +3233,8 @@
                                     $fileLines     = $fileLinesSet->getLines();
 
                                     ?><div 
-                                            data-file-lines-id="<?php echo $fileLinesSet->getHTMLID() ?>"
+                                            data-file-id="<?php echo $fileLinesSet->getHTMLID() ?>"
+                                            data-file-src="<?php echo $fileLinesSet->getSrc() ?>"
                                             class="error-editor-file"
                                     ><?= htmlentities( $fileLinesSet->getContent() ) ?></div><?php
                                 }
@@ -3268,7 +3276,7 @@
                                         var editor = ace.edit( $editor.get(0) );
 
                                         var selectFile = function( link, line ) {
-                                            var fileID = link.attr('data-file-lines-id');
+                                            var fileID = link.attr('data-file-id');
                                             if ( line === undefined ) {
                                                 line = link.attr('data-line');
                                             }
@@ -3279,7 +3287,7 @@
                                                 for ( var i = 0; i < files.size(); i++ ) {
                                                     var f = files.get(i);
 
-                                                    if ( f.getAttribute('data-file-lines-id') === fileID ) {
+                                                    if ( f.getAttribute('data-file-id') === fileID ) {
                                                         file = f;
                                                     }
                                                 }
@@ -3723,7 +3731,7 @@
                         #error-editor-ace {
                             top: 0;
                             bottom: 0;
-                            left: 114px;
+                            left : 0;
                             right: 0;
                         }
                                 #error-editor-ace.ace_editor > .ace_gutter {
@@ -3851,6 +3859,19 @@
                                 #error-editor-ace.ace_editor .ace_markup.ace_list {
                                     color:#F9EE98;
                                 }
+                                .ace_sb::-webkit-scrollbar {
+                                    background: #111;
+                                    border: 1px solid #333;
+                                    border-radius: 2px;
+                                }
+                                .ace_sb::-webkit-scrollbar-thumb {
+                                    background: #333;
+                                }
+                                .ace_sb::-webkit-scrollbar-corner {
+                                    width: 0;
+                                    height: 0;
+                                }
+
                     .error-editor-file {
                         display: none;
                     }
@@ -4187,16 +4208,18 @@
          */
         class FileLinesSet
         {
+            private $src;
             private $id;
             private $lines;
-            private $isShown;
-            private $line;
 
-            public function __construct( $line, $id, array $lines, $isShown ) {
-                $this->id = $id;
+            public function __construct( $src, $id, array $lines ) {
+                $this->src   = $src;
+                $this->id    = $id;
                 $this->lines = $lines;
-                $this->isShown = $isShown;
-                $this->line = $line;
+            }
+
+            public function getSrc() {
+                return $this->src;
             }
 
             public function getHTMLID() {
@@ -4209,14 +4232,6 @@
 
             public function getContent() {
                 return implode( "\n", $this->lines );
-            }
-
-            public function isShown() {
-                return $this->isShown;
-            }
-
-            public function getLine() {
-                return $this->line;
             }
         }
 
