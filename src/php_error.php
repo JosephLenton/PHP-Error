@@ -3222,7 +3222,10 @@
                                 </span>
                             </h2>
                             <h1 id="error-title"><?php echo $message ?></h1>
-                            <h2 id="error-file" class="<?php echo $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
+                            <div class="error-file-top <?php echo ($fileLinesSets ? 'has_code' : '') ?>">
+                                <h2 id="error-file"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
+                                <a href="#" class="error-file-save">save changes</a>
+                            </div>
                             <?php
 
                             if ( $fileLinesSets ) {
@@ -3613,10 +3616,57 @@
                      * Code Snippets at the top
                      */
                     ?>
-                    #error-file.has_code {
-                        margin: 16px 0 0 167px;
+                    .error-file-top.has_code {
                         position: relative;
+                        height: 42px;
+                        margin: 16px 0 3px 0;
                     }
+                        .error-file-top > h2 {
+                            position: absolute;
+
+                            left: 0;
+                            right: 129px;
+                            bottom: 0;
+
+                            margin: 0;
+                        }
+                        .error-file-top.has_code > h2 {
+                            bottom: 3px;
+                            left: 167px;
+                        }
+
+                        .error-file-save {
+                            position: absolute;
+                            right: 0;
+                            bottom: 0;
+                            width: 160px;
+                            line-height: 36px;
+
+                            text-align: center;
+
+                            color: #555;
+                            border: 1px solid #555;
+
+                            border-radius: 3px;
+
+                            -webkit-transition: color 200ms linear, border-color 200ms linear;
+                            -moz-transition: color 200ms linear, border-color 200ms linear;
+                            transition: color 200ms linear, border-color 200ms linear;
+                        }
+                        .error-file-save,
+                        .error-file-save:active,
+                        .error-file-save:visited,
+                        .error-file-save:hover {
+                            text-decoration: none;
+
+                            color: #555;
+                            border-color: #555;
+                        }
+                        .error-file-save:hover {
+                            color: #fff;
+                            border-color: #fff;
+                        }
+
                         #error-linenumber {
                             position: absolute;
                             text-align: right;
