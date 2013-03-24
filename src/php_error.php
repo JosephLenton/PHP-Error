@@ -3282,7 +3282,14 @@
                             <?php
 
                             if ( $fileLinesSets ) {
-                                ?><div id="error-editor" class="<?php echo ($displayLineNumber ? '' : 'no-line-nums') ?>"><div id="error-editor-ace"></div></div><?php
+                                ?>
+                                    <div id="error-editor" class="<?php echo ($displayLineNumber ? '' : 'no-line-nums') ?>">
+                                        <noscript>
+                                            <div id="noscript-editor">enable JavaScript to view source code</div>
+                                        </noscript>
+                                        <div id="error-editor-ace"></div>
+                                    </div>
+                                <?php
 
                                 foreach ( $fileLinesSets as $i => $fileLinesSet ) {
                                     $id            = $fileLinesSet->getHTMLID();
@@ -3898,12 +3905,20 @@
 
                     #error-editor {
                         width: 100%;
-                        height: 450px;
 
                         position: relative;
                         
                         margin: 0 0 36px 0;
                     }
+                    #error-editor {
+                        height: 450px;
+                    }
+                        #noscript-editor {
+                            width: 100%;
+                            line-height: 400px;
+                            font-size: 32px;
+                            text-align: center;
+                        }
                         #error-editor-ace {
                             top: 0;
                             bottom: 0;
