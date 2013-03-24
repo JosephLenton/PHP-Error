@@ -1279,7 +1279,7 @@
 
                 $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
                 $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
-                $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
+                $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , true );
 
                 $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
 
@@ -3279,7 +3279,7 @@
                             <?php
 
                             if ( $fileLinesSets ) {
-                                ?><div id="error-editor"><div id="error-editor-ace"></div></div><?php
+                                ?><div id="error-editor" class="<?php echo ($displayLineNumber ? '' : 'no-line-nums') ?>"><div id="error-editor-ace"></div></div><?php
 
                                 foreach ( $fileLinesSets as $i => $fileLinesSet ) {
                                     $id            = $fileLinesSet->getHTMLID();
@@ -3551,6 +3551,9 @@
                     #error-editor .ace_gutter,
                     .background {
                         line-height: 18px;
+                    }
+                    #error-editor.no-line-nums .ace_gutter {
+                        display: none;
                     }
 
                     h1,
