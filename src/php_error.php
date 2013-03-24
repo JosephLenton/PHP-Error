@@ -262,11 +262,21 @@
             const FILE_TYPE_IGNORE      = 2;
             const FILE_TYPE_ROOT        = 3;
 
-            const PHP_ERROR_DOWNLOAD_FILE_HEADER = 'PHP_ERROR_DOWNLOAD_FILE';
+            /*
+             * These are the various magic identifiers,
+             * used for headers, post requests, and so on.
+             * 
+             * Their main purpose is to be long and more or less unique,
+             * enough that a collision with user code is rare.
+             */
 
             const PHP_ERROR_MAGIC_HEADER_KEY = 'PHP_ERROR_MAGIC_HEADER';
             const PHP_ERROR_MAGIC_HEADER_VALUE = 'php_stack_error';
             const MAGIC_IS_PRETTY_ERRORS_MARKER = '<!-- __magic_php_error_is_a_stack_trace_constant__ -->';
+
+            const HEADER_SAVE_FILE        = 'PHP_ERROR_SAVE_FILES';
+
+            const POST_FILE_LOCATION      = 'php_error_upload_file';
 
             const PHP_ERROR_INI_PREFIX = 'php_error';
 
@@ -1107,6 +1117,9 @@
                 }
             }
 
+            private $saveUrl;
+            private $isSavingEnabled;
+
             private $cachedFiles;
 
             private $isShutdownRegistered;
@@ -1199,6 +1212,12 @@
              * 
              *  - file_link                 When true, files are linked to from the CSS Stack trace, allowing you to open them.
              *                              Defaults to true.
+             * 
+             *  - save_url                  The url of where to send files, to be saved.
+             *                              Note that 'enable_saving' must be on for this to be used (which it is by default).
+             * 
+             *  - enable_saving             Can be true or false. When true, saving files is enabled, and when false, it is disabled.
+             *                              Defaults to true!
              *
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
@@ -1233,6 +1252,9 @@
                 if ( $appFolders !== null ) {
                     ErrorHandler::setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
                 }
+
+                $this->saveUrl                  = ErrorHandler::optionsPop( $options, 'save_url', $_SERVER['REQUEST_URI'] );
+                $this->isSavingEnabled          = ErrorHandler::optionsPop( $options, 'enable_saving', true );
 
                 $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on'  , -1                        );
                 $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off' , error_reporting()         );
@@ -1326,6 +1348,29 @@
             public function turnOn() {
                 $this->propagateTurnOff();
                 $this->setEnabled( true );
+
+                /*
+                 * Check if file changes have been uploaded,
+                 * and if so, save them.
+                 */
+                global $_php_error_is_ini_enabled;
+                if ( $_php_error_is_ini_enabled ) {
+                    if ( $this->isSavingEnabled ) {
+                        $headers = ErrorHandler::getRequestHeaders();
+
+                        if ( isset($headers[ErrorHandler::HEADER_SAVE_FILE]) ) {
+                            if ( isset($_POST) && isset($_POST[ErrorHandler::POST_FILE_LOCATION]) ) {
+                                $files = $_POST[ErrorHandler::POST_FILE_LOCATION];
+
+                                foreach ( $files as $file => $content ) {
+                                    @file_put_contents($file, $content);
+                                }
+
+                                exit(0);
+                            }
+                        }
+                    }
+                }
 
                 return $this;
             }
@@ -3168,6 +3213,8 @@
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
                 $displayLineNumber = $this->displayLineNumber;
+                $saveUrl           = $this->saveUrl;
+                $isSavingEnabled   = $this->isSavingEnabled;
 
                 /*
                  * When a query string is not provided,
@@ -3203,7 +3250,8 @@
                                 $message, $errLine, $errFile, $errFileType, $stackTrace,
                                 &$fileLinesSets, $numFileLines,
                                 $displayLineNumber,
-                                $dumpInfo
+                                $dumpInfo,
+                                $isSavingEnabled
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -3224,7 +3272,9 @@
                             <h1 id="error-title"><?php echo $message ?></h1>
                             <div class="error-file-top <?php echo ($fileLinesSets ? 'has_code' : '') ?>">
                                 <h2 id="error-file"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
-                                <a href="#" class="error-file-save">save changes</a>
+                                <?php if ( $isSavingEnabled ) { ?>
+                                    <a href="#" class="error-file-save">save changes</a>
+                                <?php } ?>
                             </div>
                             <?php
 
@@ -3256,7 +3306,7 @@
                          * Adds:
                          *  = mouse movement for switching the code snippet in real time
                          */
-                        function() {
+                        function() use ( $saveUrl ) {
                             ?><script>
                                 "use strict";
 
@@ -3276,7 +3326,17 @@
                                         var EditSession = ace.require('ace/edit_session').EditSession;
                                         var php = ace.require('ace/mode/php');
 
+                                        var changedFiles = {},
+                                            fileSessions = {};
+                                        var currentFile = null;
+
                                         var editor = ace.edit( $editor.get(0) );
+
+                                        editor.on('change', function() {
+                                            if ( currentFile !== null ) {
+                                                changedFiles[currentFile] = true;
+                                            }
+                                        } );
 
                                         var selectFile = function( link, line ) {
                                             var fileID = link.attr('data-file-id');
@@ -3296,12 +3356,18 @@
                                                 }
 
                                                 if ( file ) {
-                                                    if ( ! file.__ace_session ) {
-                                                        file.__ace_session = new EditSession( file.textContent );
-                                                        file.__ace_session.setMode( 'ace/mode/php' );
+                                                    currentFile = file.getAttribute('data-file-src');
+                                                    var session;
+
+                                                    if ( fileSessions.hasOwnProperty(currentFile) ) {
+                                                        session = fileSessions[ currentFile ];
+                                                    } else {
+                                                        session = fileSessions[ currentFile ] =
+                                                                new EditSession( file.textContent );
+                                                        session.setMode( 'ace/mode/php' );
                                                     }
 
-                                                    editor.setSession( file.__ace_session );
+                                                    editor.setSession( session );
 
                                                     editor.gotoLine( line );
 
@@ -3347,6 +3413,43 @@
                                         });
 
                                         selectFile( $('.error-stack-trace-line.highlight') );
+
+                                        $('.error-file-save').click( function(ev) {
+                                            ev.preventDefault();
+                                            ev.stopPropagation();
+
+                                            var files = {},
+                                                hasChanges = false;
+
+                                            for ( var k in changedFiles ) {
+                                                if ( fileSessions.hasOwnProperty(k) && changedFiles.hasOwnProperty(k) && changedFiles[k] ) {
+                                                    files[k] = fileSessions[k].getValue();
+                                                    hasChanges = true;
+                                                }
+                                            }
+
+                                            if ( ! hasChanges ) {
+                                                document.location.reload(true);
+                                            } else {
+                                                $.ajax({
+                                                        type: "POST",
+                                                        url: "<?php echo $saveUrl ?>", 
+                                                        dataType: "json",
+
+                                                        data: {
+                                                            "<?php echo ErrorHandler::POST_FILE_LOCATION ?>": files
+                                                        },
+
+                                                        success: function(res, status, xhr) {
+                                                            document.location.reload(true);
+                                                        },
+
+                                                        beforeSend: function(xhr) {
+                                                            xhr.setRequestHeader( "<?php echo ErrorHandler::HEADER_SAVE_FILE ?>", 'true' );
+                                                        }
+                                                });
+                                            }
+                                        } );
                                     }
                                 } );
                             </script><?php
