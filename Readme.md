@@ -17,6 +17,20 @@ This requires no changes to your JavaScript, and works with existing JS librarie
 
 Check out the [project homepage](http://phperror.net) for a live demo.
 
+Do not use on a live site!
+--------------------------
+
+To help make development easier, this __deliberately__ makes your code unsafe.
+External requests are allowed to change your code, it shows more about your site,
+gives you more info, and makes trivial errors fatal.
+All of that is awesome if you want to fix bugs in less time,
+but in production, it is totally unsafe.
+
+**seriously, only use this for development!**
+
+In case you forget,
+you can disable this in production using the 'php_error.force_disabled' php.ini option (see below).
+
 Features
 --------
  * trivial to use, it's just one file
@@ -54,16 +68,6 @@ Documentation
 ### [Options](https://github.com/JosephLenton/PHP-Error/wiki/Options)
 
 ### [php.ini settings](https://github.com/JosephLenton/PHP-Error/wiki/php.ini)
-
-Do not use on a live site!
---------------------------
-
-This is intended for __development only__. It shows more about your site, gives you more info, and makes trivial errors fatal.
-All of that is awesome if you want to debug quicker, and force high quality standards.
-
-On a production server, that sucks, and is potentially unsafe.
-
-In case you forget, you can disable this in production using the 'php_error.force_disabled' php.ini option (see below).
 
 Advanced Features
 -----------------
