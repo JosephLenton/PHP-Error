@@ -2977,7 +2977,7 @@
                                      */
                                     var retry = iDoc.getElementById('ajax-retry');
                                     if ( retry ) {
-                                        retry.onclick = function() {
+                                        var retryFun = function() {
                                             var methodCalls = self.__.methodCalls;
 
                                             initializeXMLHttpRequest.call( self );
@@ -2990,6 +2990,9 @@
 
                                             return false;
                                         };
+                                        retry.onclick = retryFun;
+
+                                        iframe.__php_error_retry = retryFun;
 
                                         /*
                                          * The close handler.
@@ -3428,8 +3431,25 @@
                                                 }
                                             }
 
+                                            var retryFun = null;
+                                            if ( window.top !== window ) {
+                                                var arrFrames = parent.document.getElementsByTagName("IFRAME");
+
+                                                for (var i = 0; i < arrFrames.length; i++) {
+                                                    if (arrFrames[i].contentWindow === window) {
+                                                        retryFun = arrFrames[i].__php_error_retry;
+                                                    }
+                                                }
+                                            }
+
+                                            if ( retryFun === null ) {
+                                                retryFun = function() {
+                                                    document.location.reload( true );
+                                                }
+                                            }
+
                                             if ( ! hasChanges ) {
-                                                document.location.reload(true);
+                                                retryFun();
                                             } else {
                                                 $.ajax({
                                                         type: "POST",
@@ -3441,7 +3461,7 @@
                                                         },
 
                                                         success: function(res, status, xhr) {
-                                                            document.location.reload(true);
+                                                            retryFun();
                                                         },
 
                                                         beforeSend: function(xhr) {
