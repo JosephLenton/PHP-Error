@@ -90,8 +90,7 @@
 
     namespace php_error;
 
-    use \php_error\ErrorException,
-        \php_error\FileLinesSet,
+    use \php_error\FileLinesSet,
         \php_error\ErrorHandler,
 
         \php_error\JSMin,
@@ -99,6 +98,7 @@
 
     use \Closure,
         \Exception,
+        \ErrorException,
         \InvalidArgumentException;
 
     use \ReflectionMethod,
@@ -2372,7 +2372,7 @@
              * so you will get a full stack trace.
              */
             public function reportClassNotFound( $className ) {
-                throw new ErrorException( "Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__ );
+                throw new \ErrorException( "Class '$className' not found", E_ERROR, 0, __FILE__, __LINE__ );
             }
 
             /**
@@ -2542,9 +2542,15 @@
                     $errFile = $ex->getFile();
                     $errLine = $ex->getLine();
 
-                    $code = method_exists($ex, 'getSeverity') ?
-                            $ex->getSeverity() :
-                            $ex->getCode()     ;
+                    $code = $ex->getCode();
+
+                    if ( method_exists($ex, 'getSeverity') ) {
+                        $severity = $ex->getSeverity();
+
+                        if ( $code === 0 && $severity !== 0 && $severity !== null ) {
+                            $code = $severity;
+                        }
+                    }
                 }
 
                 return array( $ex, $stackTrace, $code, $errFile, $errLine );
@@ -2718,7 +2724,7 @@
                                      * When using an @, the error reporting drops to 0.
                                      */
                                     if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
-                                        $ex = new ErrorException( $message, $code, $code, $file, $line );
+                                        $ex = new \ErrorException( $message, $code, 0, $file, $line );
 
                                         $self->reportException( $ex );
                                     }
@@ -2787,7 +2793,7 @@
                                     }
 
                                     if ( $error ) {
-                                        $classException = new ErrorException( "Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__ );
+                                        $classException = new \ErrorException( "Class '$className' not found", E_ERROR, 0, __FILE__, __LINE__ );
                                     }
                                 }
                             } );
@@ -4372,24 +4378,6 @@
                 if ( $javascript ) {
                     $javascript();
                 }
-            }
-        }
-
-        /**
-         * This is a carbon copy of \ErrorException.
-         * However that is only supported in PHP 5.1 and above,
-         * so this allows PHP Error to work in PHP 5.0.
-         *
-         * A thin class that wraps up an error, into an exception.
-         */
-        class ErrorException extends Exception
-        {
-            public function __construct( $message, $code, $severity, $file, $line )
-            {
-                parent::__construct( $message, $code, null );
-
-                $this->file = $file;
-                $this->line = $line;
             }
         }
 
