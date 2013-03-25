@@ -129,23 +129,20 @@
          * then any number could be used. That is why they start counting
          * at 100,000.
          */
-        if ( ! defined('T_DIR') ) {
-            define( 'T_DIR', 100001 );
-        }
-        if ( ! defined('T_GOTO') ) {
-            define( 'T_GOTO', 100002 );
-        }
-        if ( ! defined('T_NAMESPACE') ) {
-            define( 'T_NAMESPACE', 100003 );
-        }
-        if ( ! defined('T_NS_C') ) {
-            define( 'T_NS_C', 100004 );
-        }
-        if ( ! defined('T_NS_SEPARATOR') ) {
-            define( 'T_NS_SEPARATOR', 100005 );
-        }
-        if ( ! defined('T_USE') ) {
-            define( 'T_USE', 100006 );
+
+        $missingIdentifier = array(
+                'T_INSTEADOF',
+                'T_TRAIT',
+                'T_TRAIT_C',
+                'T_YIELD',
+                'T_FINALLY'
+        );
+
+        $counter = 100001;
+        foreach ( $missingIdentifier as $id ) {
+            if ( ! defined($id) ) {
+                define( $id, $counter++ );
+            }
         }
 
         /*
@@ -347,6 +344,7 @@
                     'T_EXTENDS'                     => 'extends',
                     'T_FILE'                        => '__FILE__',
                     'T_FINAL'                       => 'final',
+                    'T_FINALLY'                     => 'finally',
                     'T_FOR'                         => 'for',
                     'T_FOREACH'                     => 'foreach',
                     'T_FUNCTION'                    => 'function',
@@ -360,6 +358,7 @@
                     'T_INCLUDE'                     => 'include',
                     'T_INCLUDE_ONCE'                => 'include_once',
                     'T_INSTANCEOF'                  => 'instanceof',
+                    'T_INSTEADOF'                   => 'insteadof',
                     'T_INT_CAST'                    => 'int cast',
                     'T_INTERFACE'                   => 'interface',
                     'T_ISSET'                       => 'isset',
@@ -410,6 +409,8 @@
                     'T_SWITCH'                      => 'switch',
                     'T_THROW'                       => 'throw',
                     'T_TRY'                         => 'try',
+                    'T_TRAIT'                       => 'trait',
+                    'T_TRAIT_C'                     => '__trait__',
                     'T_UNSET'                       => 'unset',
                     'T_UNSET_CAST'                  => 'unset cast',
                     'T_USE'                         => 'use',
@@ -417,7 +418,8 @@
                     'T_VARIABLE'                    => 'variable',
                     'T_WHILE'                       => 'while',
                     'T_WHITESPACE'                  => 'whitespace',
-                    'T_XOR_EQUAL'                   => "'^='"
+                    'T_XOR_EQUAL'                   => "'^='",
+                    'T_YIELD'                       => 'yield'
             );
 
             private static $syntaxMap = array(
@@ -452,6 +454,7 @@
                     T_EXTENDS                     => 'syntax-keyword',
 
                     T_FINAL                       => 'syntax-keyword',
+                    T_FINALLY                     => 'syntax-keyword',
                     T_FOR                         => 'syntax-keyword',
                     T_FOREACH                     => 'syntax-keyword',
                     T_FUNCTION                    => 'syntax-keyword',
@@ -461,6 +464,7 @@
                     T_IF                          => 'syntax-keyword',
                     T_IMPLEMENTS                  => 'syntax-keyword',
                     T_INSTANCEOF                  => 'syntax-keyword',
+                    T_INSTEADOF                   => 'syntax-keyword',
                     T_INTERFACE                   => 'syntax-keyword',
 
                     T_LOGICAL_AND                 => 'syntax-keyword',
@@ -475,10 +479,12 @@
                     T_STATIC                      => 'syntax-keyword',
                     T_SWITCH                      => 'syntax-keyword',
                     T_THROW                       => 'syntax-keyword',
+                    T_TRAIT                       => 'syntax-keyword',
                     T_TRY                         => 'syntax-keyword',
                     T_USE                         => 'syntax-keyword',
                     T_VAR                         => 'syntax-keyword',
                     T_WHILE                       => 'syntax-keyword',
+                    T_YIELD                       => 'syntax-keyword',
 
                     // __VAR__ type magic constants
                     T_CLASS_C                     => 'syntax-literal',
@@ -488,6 +494,7 @@
                     T_LINE                        => 'syntax-literal',
                     T_METHOD_C                    => 'syntax-literal',
                     T_NS_C                        => 'syntax-literal',
+                    T_TRAIT_C                     => 'syntax-literal',
 
                     T_DNUMBER                     => 'syntax-literal',
                     T_LNUMBER                     => 'syntax-literal',
