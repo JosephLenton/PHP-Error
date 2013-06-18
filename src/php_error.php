@@ -1142,6 +1142,7 @@
             private $defaultErrorReportingOff;
             private $applicationRoot;
             private $serverName;
+            private $showErrorCode;
 
             private $catchClassNotFound;
             private $catchSurpressedErrors;
@@ -1226,6 +1227,8 @@
              *  - enable_saving             Can be true or false. When true, saving files is enabled, and when false, it is disabled.
              *                              Defaults to true!
              *
+             *  - show_error_code           Can be true or false. When true php error codes are shown in the actual error message.
+             *                              Defaults to false.
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
              */
@@ -1268,6 +1271,7 @@
 
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'    , $_SERVER['DOCUMENT_ROOT'] );
                 $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name'         , $_SERVER['SERVER_NAME']   );
+                $this->showErrorCode            = ErrorHandler::optionsPop( $options, 'show_error_code'         , false);
 
                 /*
                  * Relative paths might be given for document root,
