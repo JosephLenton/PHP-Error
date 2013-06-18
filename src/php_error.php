@@ -2520,7 +2520,7 @@
 
                             $_SERVER
                     );
-                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
+                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump, $code );
 
                     // exit in order to end processing
                     $this->turnOff();
@@ -3251,13 +3251,15 @@
              * The actual display logic.
              * This outputs the error details in HTML.
              */
-            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
+            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo, $code ) {
                 $applicationRoot   = $this->applicationRoot;
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
                 $displayLineNumber = $this->displayLineNumber;
                 $saveUrl           = $this->saveUrl;
                 $isSavingEnabled   = $this->isSavingEnabled;
+                $showErrorCode		 = $this->showErrorCode;
+                $codeDescription 	 = ErrorHandler::$PHP_ERROR_MAPPINGS[$code];                
 
                 /*
                  * When a query string is not provided,
@@ -3294,7 +3296,10 @@
                                 &$fileLinesSets, $numFileLines,
                                 $displayLineNumber,
                                 $dumpInfo,
-                                $isSavingEnabled
+                                $isSavingEnabled,
+                                $showErrorCode,
+                                $code,
+	                              $codeDescription
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -3312,7 +3317,7 @@
                                     <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
                                 </span>
                             </h2>
-                            <h1 id="error-title"><?php echo $message ?></h1>
+                            <h1 id="error-title"><?php echo $message ?><?php echo ($showErrorCode ? " | ".$codeDescription." (".$code.")" : ""); ?></h1>
                             <div class="error-file-top <?php echo ($fileLinesSets ? 'has_code' : '') ?>">
                                 <h2 id="error-file"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
                                 <?php if ( $isSavingEnabled ) { ?>
