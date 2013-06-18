@@ -3317,7 +3317,8 @@
                                     <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
                                 </span>
                             </h2>
-                            <h1 id="error-title"><?php echo $message ?><?php echo ($showErrorCode ? " | ".$codeDescription." (".$code.")" : ""); ?></h1>
+                            <h1 id="error-title"><?php echo $message ?></h1>
+                            <?php echo ($showErrorCode ? " <h3 id='error-code'>".$codeDescription." (".$code.")</h3>" : ""); ?>
                             <div class="error-file-top <?php echo ($fileLinesSets ? 'has_code' : '') ?>">
                                 <h2 id="error-file"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
                                 <?php if ( $isSavingEnabled ) { ?>
@@ -3629,7 +3630,8 @@
                     }
 
                     h1,
-                    h2 {
+                    h2,
+                    h3 {
                         font-family: "Segoe UI Light","Helvetica Neue",'RobotoLight',"Segoe UI","Segoe WP",sans-serif;
                         font-weight: 100;
                         line-height: normal;
@@ -3760,6 +3762,12 @@
                         margin-top: 6px;
                         position: relative;
                         white-space: pre-wrap;
+                    }
+                    
+                    #error-code {
+                    	font-size: 14px;
+                    	margin-bottom: 0px;
+                    	margin-top: 0px;
                     }
 
                     <?php
