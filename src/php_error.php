@@ -1370,7 +1370,7 @@
                                 $files = $_POST[ErrorHandler::POST_FILE_LOCATION];
 
                                 foreach ( $files as $file => $content ) {
-                                    @file_put_contents($file, $content);
+                                    @file_put_contents( $file, stripcslashes($content) );
                                 }
 
                                 exit(0);
