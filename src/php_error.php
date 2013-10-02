@@ -3136,7 +3136,7 @@
                                     /*
                                      * Check headers for error.
                                      */
-                                    if ( ! isAjaxError && state >= 2 ) {
+                                    if ( ! isAjaxError && state >= 4 ) {
                                         /*
                                          * It's null in some browsers, and an empty string in others.
                                          */
