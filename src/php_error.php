@@ -3345,7 +3345,7 @@
                                             data-file-id="<?php echo $fileLinesSet->getHTMLID() ?>"
                                             data-file-src="<?php echo $fileLinesSet->getSrc() ?>"
                                             class="error-editor-file"
-                                    ><?= htmlentities( $fileLinesSet->getContent() ) ?></div><?php
+                                    ><?php echo htmlentities( $fileLinesSet->getContent() ) ?></div><?php
                                 }
                             }
 
