@@ -2507,7 +2507,7 @@
                 }
             }
 
-            private function addCustomData( $key, $data ) {
+            public function addCustomData( $key, $data ) {
                 if (isset($this->customData[$key])) {
                     throw new ErrorException(sprintf('Custom data with key %s already exists'), $key);
                 }
