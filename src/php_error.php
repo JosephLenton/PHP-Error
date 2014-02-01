@@ -525,6 +525,29 @@
             );
 
             /**
+             * A mapping of PHP errors,
+             * mapped to descriptions of them.
+             */
+            private static $PHP_ERROR_MAPPINGS = array(
+		            		E_ERROR 											=> 'E_ERROR',
+										E_WARNING 										=> 'E_WARNING',
+										E_PARSE 											=> 'E_PARSE',
+										E_NOTICE 											=> 'E_NOTICE',
+										E_CORE_ERROR 									=> 'E_CORE_ERROR',
+										E_CORE_WARNING 								=> 'E_CORE_WARNING',
+										E_COMPILE_ERROR 							=> 'E_COMPILE_ERROR',
+										E_COMPILE_WARNING 					  => 'E_COMPILE_WARNING',
+										E_USER_ERROR									=> 'E_USER_ERROR',
+										E_USER_WARNING 								=> 'E_USER_WARNING',
+										E_USER_NOTICE 								=> 'E_USER_NOTICE',
+										E_STRICT 											=> 'E_STRICT',
+										E_RECOVERABLE_ERROR 					=> 'E_RECOVERABLE_ERROR',
+										E_DEPRECATED 									=> 'E_DEPRECATED',
+										E_USER_DEPRECATED 						=> 'E_USER_DEPRECATED',
+										E_ALL 												=> 'E_ALL'
+						);
+
+            /**
              * A list of methods which are known to call the autoloader,
              * but should not error, if the class is not found.
              *
@@ -1143,6 +1166,7 @@
             private $defaultErrorReportingOff;
             private $applicationRoot;
             private $serverName;
+            private $showErrorCode;
 
             private $catchClassNotFound;
             private $catchSurpressedErrors;
@@ -1230,6 +1254,8 @@
              *  - allow_manual_report       Allows the reportException() and reportError() functions to run even when isOff().
              *                              Defaults to false.
              *
+             *  - show_error_code           Can be true or false. When true php error codes are shown in the actual error message.
+             *                              Defaults to false.
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
              */
@@ -1272,6 +1298,7 @@
 
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'    , $_SERVER['DOCUMENT_ROOT'] );
                 $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name'         , $_SERVER['SERVER_NAME']   );
+                $this->showErrorCode            = ErrorHandler::optionsPop( $options, 'show_error_code'         , false);
 
                 /*
                  * Relative paths might be given for document root,
@@ -2499,7 +2526,7 @@
 
                             $_SERVER
                     );
-                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
+                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump, $code );
 
                     // exit in order to end processing
                     $this->turnOff();
@@ -3230,13 +3257,15 @@
              * The actual display logic.
              * This outputs the error details in HTML.
              */
-            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
+            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo, $code ) {
                 $applicationRoot   = $this->applicationRoot;
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
                 $displayLineNumber = $this->displayLineNumber;
                 $saveUrl           = $this->saveUrl;
                 $isSavingEnabled   = $this->isSavingEnabled;
+                $showErrorCode		 = $this->showErrorCode;
+                $codeDescription 	 = ErrorHandler::$PHP_ERROR_MAPPINGS[$code];                
 
                 /*
                  * When a query string is not provided,
@@ -3273,7 +3302,10 @@
                                 &$fileLinesSets, $numFileLines,
                                 $displayLineNumber,
                                 $dumpInfo,
-                                $isSavingEnabled
+                                $isSavingEnabled,
+                                $showErrorCode,
+                                $code,
+	                              $codeDescription
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -3292,6 +3324,7 @@
                                 </span>
                             </h2>
                             <h1 id="error-title"><?php echo $message ?></h1>
+                            <?php echo ($showErrorCode ? " <h3 id='error-code'>".$codeDescription." (".$code.")</h3>" : ""); ?>
                             <div class="error-file-top <?php echo ($fileLinesSets ? 'has_code' : '') ?>">
                                 <h2 id="error-file"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
                                 <?php if ( $isSavingEnabled ) { ?>
@@ -3603,7 +3636,8 @@
                     }
 
                     h1,
-                    h2 {
+                    h2,
+                    h3 {
                         font-family: "Segoe UI Light","Helvetica Neue",'RobotoLight',"Segoe UI","Segoe WP",sans-serif;
                         font-weight: 100;
                         line-height: normal;
@@ -3734,6 +3768,12 @@
                         margin-top: 6px;
                         position: relative;
                         white-space: pre-wrap;
+                    }
+                    
+                    #error-code {
+                    	font-size: 14px;
+                    	margin-bottom: 0px;
+                    	margin-top: 0px;
                     }
 
                     <?php
