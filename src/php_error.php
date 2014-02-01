@@ -529,23 +529,23 @@
              * mapped to descriptions of them.
              */
             private static $PHP_ERROR_MAPPINGS = array(
-		            		E_ERROR 											=> 'E_ERROR',
-										E_WARNING 										=> 'E_WARNING',
-										E_PARSE 											=> 'E_PARSE',
-										E_NOTICE 											=> 'E_NOTICE',
-										E_CORE_ERROR 									=> 'E_CORE_ERROR',
-										E_CORE_WARNING 								=> 'E_CORE_WARNING',
-										E_COMPILE_ERROR 							=> 'E_COMPILE_ERROR',
-										E_COMPILE_WARNING 					  => 'E_COMPILE_WARNING',
-										E_USER_ERROR									=> 'E_USER_ERROR',
-										E_USER_WARNING 								=> 'E_USER_WARNING',
-										E_USER_NOTICE 								=> 'E_USER_NOTICE',
-										E_STRICT 											=> 'E_STRICT',
-										E_RECOVERABLE_ERROR 					=> 'E_RECOVERABLE_ERROR',
-										E_DEPRECATED 									=> 'E_DEPRECATED',
-										E_USER_DEPRECATED 						=> 'E_USER_DEPRECATED',
-										E_ALL 												=> 'E_ALL'
-						);
+            		E_ERROR 				=> 'E_ERROR',
+					E_WARNING 				=> 'E_WARNING',
+					E_PARSE 				=> 'E_PARSE',
+					E_NOTICE 				=> 'E_NOTICE',
+					E_CORE_ERROR 			=> 'E_CORE_ERROR',
+					E_CORE_WARNING 			=> 'E_CORE_WARNING',
+					E_COMPILE_ERROR 		=> 'E_COMPILE_ERROR',
+					E_COMPILE_WARNING 		=> 'E_COMPILE_WARNING',
+					E_USER_ERROR			=> 'E_USER_ERROR',
+					E_USER_WARNING 			=> 'E_USER_WARNING',
+					E_USER_NOTICE 			=> 'E_USER_NOTICE',
+					E_STRICT 				=> 'E_STRICT',
+					E_RECOVERABLE_ERROR 	=> 'E_RECOVERABLE_ERROR',
+					E_DEPRECATED 			=> 'E_DEPRECATED',
+					E_USER_DEPRECATED 		=> 'E_USER_DEPRECATED',
+					E_ALL 					=> 'E_ALL'
+			);
 
             /**
              * A list of methods which are known to call the autoloader,
@@ -3283,8 +3283,8 @@
                 $displayLineNumber = $this->displayLineNumber;
                 $saveUrl           = $this->saveUrl;
                 $isSavingEnabled   = $this->isSavingEnabled;
-                $showErrorCode		 = $this->showErrorCode;
-                $codeDescription 	 = ErrorHandler::$PHP_ERROR_MAPPINGS[$code];                
+                $showErrorCode	   = $this->showErrorCode;
+                $codeDescription   = (!empty(ErrorHandler::$PHP_ERROR_MAPPINGS[$code]) ? ErrorHandler::$PHP_ERROR_MAPPINGS[$code] : '');
 
                 /*
                  * When a query string is not provided,
@@ -3324,7 +3324,7 @@
                                 $isSavingEnabled,
                                 $showErrorCode,
                                 $code,
-	                              $codeDescription
+	                            $codeDescription
                         ) {
                             if ( $backgroundText ) { ?>
                                 <div id="error-wrap">
@@ -4427,19 +4427,21 @@
                  */
                 ?><script>
                 <?php
+                /* ACE editor */
                 if (defined('PHPERROR_ACE_EDITOR_INCLUDEPATH'))
                 {
                     $js_blob = @file_get_contents(PHPERROR_ACE_EDITOR_INCLUDEPATH);
                 }
                 else
                 {
-                    $js_blob = @file_get_contents(dirname(__FILE__) . 'php_error_ace.js');
+                    $js_blob = @file_get_contents(dirname(__FILE__) . '/php_error_ace.js');
                 }
                 echo $js_blob;
                 ?>
-                </script><?php
+                </script>
 
-                ?><script>
+                <script>
+                /* jQuery library */
                 <?php
                 if (defined('PHPERROR_JQUERY_INCLUDEPATH'))
                 {
@@ -4447,7 +4449,7 @@
                 }
                 else
                 {
-                    $js_blob = @file_get_contents(dirname(__FILE__) . 'php_error_jquery.js');
+                    $js_blob = @file_get_contents(dirname(__FILE__) . '/php_error_jquery.js');
                 }
                 echo $js_blob;
                 ?>
