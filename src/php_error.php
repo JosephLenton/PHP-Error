@@ -1615,6 +1615,10 @@
                             ob_end_clean();
                         } else if ( $handler === 'default output handler' ) {
                             ob_end_clean();
+                        } else if ( $handler === 'zlib output compression' ) {
+                            if (ob_get_level()) {
+                                while (@ob_end_clean());
+                            }
                         } else {
                             ob_end_flush();
                         }
