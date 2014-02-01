@@ -572,6 +572,8 @@
                     'application/xhtml+xml'
             );
 
+            private $customData = array();
+
             private static function isIIS() {
                 return (
                                 isset($_SERVER['SERVER_SOFTWARE']) &&
@@ -2510,16 +2512,20 @@
                         session_start();
                     }
 
+                    $arrays = array(
+                        'post'    => ( isset($_POST)    ? $_POST    : array() ),
+                        'get'     => ( isset($_GET)     ? $_GET     : array() ),
+                        'session' => ( isset($_SESSION) ? $_SESSION : array() ),
+                        'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() ),
+                    );
+
+                    $arrays = array_merge($arrays, $this->customData);
+
                     $request  = ErrorHandler::getRequestHeaders();
                     $response = ErrorHandler::getResponseHeaders();
 
                     $dump = $this->generateDumpHTML(
-                            array(
-                                    'post'    => ( isset($_POST)    ? $_POST    : array() ),
-                                    'get'     => ( isset($_GET)     ? $_GET     : array() ),
-                                    'session' => ( isset($_SESSION) ? $_SESSION : array() ),
-                                    'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() )
-                            ),
+                            $arrays,
 
                             $request,
                             $response,
@@ -2532,6 +2538,15 @@
                     $this->turnOff();
                     exit(0);
                 }
+            }
+
+            public function addCustomData( $key, $data ) {
+                if (isset($this->customData[$key])) {
+                    throw new ErrorException(sprintf('Custom data with key %s already exists'), $key);
+                }
+                $this->customData[$key] = $data;
+
+                return $this;
             }
 
             private function getStackTrace( $ex, $code, $errFile, $errLine ) {
@@ -4044,10 +4059,10 @@
                                 #error-editor-ace.ace_editor .ace_constant.ace_other {
                                     color:#cF5d33;
                                 }
-                                #error-editor-ace.ace_editor .ace_constant.ace_character,  {
+                                #error-editor-ace.ace_editor .ace_constant.ace_character {
                                     color:#CF6A4C;
                                 }
-                                #error-editor-ace.ace_editor .ace_constant.ace_character.ace_escape,  {
+                                #error-editor-ace.ace_editor .ace_constant.ace_character.ace_escape {
                                     color:#CF6A4C;
                                 }
                                 #error-editor-ace.ace_editor .ace_invalid.ace_illegal {
@@ -4418,8 +4433,9 @@
                 }
                 echo $js_blob;
                 ?>
-                </script>
-                <script>
+                </script><?php
+
+                ?><script>
                 <?php
                 if (defined('PHPERROR_JQUERY_INCLUDEPATH'))
                 {
