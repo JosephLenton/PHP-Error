@@ -4441,7 +4441,7 @@
                 }
                 else
                 {
-                    $js_blob = @file_get_contents(dirname(__FILE__) . '/php_error_ace.1.js');
+                    $js_blob = @file_get_contents(dirname(__FILE__) . '/php_error_ace.js');
                 }
                 echo $js_blob;
                 ?>
