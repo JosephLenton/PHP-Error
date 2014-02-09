@@ -105,6 +105,9 @@
         \ReflectionFunction,
         \ReflectionParameter;
 
+    if (!defined('PHPERROR_WRAP_AJAX')) define('PHPERROR_WRAP_AJAX', true);
+    if (!defined('PHPERROR_DO_MINIFY')) define('PHPERROR_DO_MINIFY', false);
+
     global $_php_error_already_setup,
            $_php_error_global_handler,
            $_php_error_is_ini_enabled;
@@ -1639,7 +1642,7 @@
                          !ErrorHandler::isBinaryRequest()
                     ) {
                         $js = $this->getContent( 'displayJSInjection' );
-                        if (defined('PHPERROR_DO_MINIFY') && !PHPERROR_DO_MINIFY) {
+                        if (defined('PHPERROR_DO_MINIFY') && PHPERROR_DO_MINIFY) {
                             $js = JSMin::minify( $js );
                         }
 
@@ -2866,7 +2869,7 @@
             }
 
             private function displayJSInjection() {
-                if (defined('PHPERROR_WRAP_AJAX') && !PHPERROR_WRAP_AJAX) {
+                if (defined('PHPERROR_WRAP_AJAX') && PHPERROR_WRAP_AJAX) {
                 ?><script data-php_error="magic JS, just ignore this!">
                     "use strict";
 
@@ -4503,7 +4506,7 @@
             }
         }
 
-        if (defined('PHPERROR_DO_MINIFY') && !PHPERROR_DO_MINIFY) {
+        if (defined('PHPERROR_DO_MINIFY') && PHPERROR_DO_MINIFY) {
 
             /**
              * jsmin.php - PHP implementation of Douglas Crockford's JSMin.
