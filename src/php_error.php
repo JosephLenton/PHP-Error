@@ -81,7 +81,7 @@
      *                            this forces this to be off.
      *                            This is so you can disable this script
      *                            in your production servers ini file,
-     *                            incase you accidentally upload this there.
+     *                            in case you accidentally upload this there.
      *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
      *
