@@ -1193,6 +1193,8 @@
 
             private $classNotFoundException;
 
+            private $clearAllBuffers;
+
             /**
              * = Options =
              *
@@ -1266,7 +1268,11 @@
              */
             public function __construct( $options=null ) {
                 // there can only be one to rule them all
-                global $_php_error_global_handler;
+                global $_php_error_global_handler, $_php_error_is_ini_enabled;
+                // Don't set up if not allowed
+                if(!$_php_error_is_ini_enabled) {
+                  return null;
+                }
                 if ( $_php_error_global_handler !== null ) {
                     $this->lastGlobalErrorHandler = $_php_error_global_handler;
                 } else {
@@ -1304,6 +1310,8 @@
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'    , $_SERVER['DOCUMENT_ROOT'] );
                 $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name'         , $_SERVER['SERVER_NAME']   );
                 $this->showErrorCode            = ErrorHandler::optionsPop( $options, 'show_error_code'         , false);
+
+                $this->clearAllBuffers          = ErrorHandler::optionsPop( $options, 'clear_all_buffers', true);
 
                 /*
                  * Relative paths might be given for document root,
@@ -1572,6 +1580,9 @@
              * do want it. However otherwise, it will be lost.
              */
             private function discardBuffer() {
+                if ( $this->clearAllBuffers ) {
+                    while( @ob_end_clean() );
+                }
                 $str = $this->bufferOutputStr;
 
                 $this->bufferOutputStr = '';
@@ -2452,6 +2463,11 @@
              */
             public function reportError( $code, $message, $errLine, $errFile, $ex=null ) {
                 $this->discardBuffer();
+                /*
+                 * Turning off 'html_errors' at this point avoids interference
+                 * with xDebugs 'var_dump()'-overload, thus preserving prettyfied dumps
+                 */
+                @ini_set( 'html_errors', false );
 
                 if (
                         $ex === null &&
@@ -2764,7 +2780,6 @@
 
                     // all errors \o/ !
                     error_reporting( $this->defaultErrorReportingOn );
-                    @ini_set( 'html_errors', false );
 
                     if ( ErrorHandler::isIIS() ) {
                         @ini_set( 'log_errors', false );
