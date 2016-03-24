@@ -1627,6 +1627,7 @@
                         if ( $handler === 'ob_gzhandler' ) {
                             $wasGZHandler = true;
                             ob_end_clean();
+                        } else if ( $handler === 'zlib output compression' ) {
                         } else if ( $handler === 'default output handler' ) {
                             ob_end_clean();
                         } else if ( $handler === 'zlib output compression' ) {
