@@ -3585,7 +3585,9 @@
 
                 // clean out anything displayed already
                 try {
-                    @ob_clean();
+                    while(ob_get_level() > 0) {
+                        ob_end_clean();
+                    }
                 } catch ( Exception $ex ) { /* do nothing */ }
 
                 if (!$this->htmlOnly && ErrorHandler::isNonPHPRequest()) {
