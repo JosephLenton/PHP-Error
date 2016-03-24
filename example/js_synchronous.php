@@ -3,8 +3,6 @@
 	\php_error\reportErrors();
 ?>
 <!DOCTYPE html>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-
 <script>
     var sendOnce = true;
 
@@ -14,7 +12,7 @@
         console.log( r.responseText.length );
 	}
 
-	r.open( 'get', '/example/unknown_variable.php', false );
+	r.open( 'get', './unknown_variable.php', false );
 	r.send();
 
     console.log( 'done outside ' + r.responseText.length );
