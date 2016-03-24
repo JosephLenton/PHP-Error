@@ -1193,6 +1193,8 @@
 
             private $classNotFoundException;
 
+            private $clearAllBuffers;
+
             /**
              * = Options =
              *
@@ -1304,6 +1306,8 @@
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'    , $_SERVER['DOCUMENT_ROOT'] );
                 $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name'         , $_SERVER['SERVER_NAME']   );
                 $this->showErrorCode            = ErrorHandler::optionsPop( $options, 'show_error_code'         , false);
+
+                $this->clearAllBuffers          = ErrorHandler::optionsPop( $options, 'clear_all_buffers', false);
 
                 /*
                  * Relative paths might be given for document root,
@@ -1572,6 +1576,9 @@
              * do want it. However otherwise, it will be lost.
              */
             private function discardBuffer() {
+                if ( $this->clearAllBuffers ) {
+                    while( @ob_end_clean() );
+                }
                 $str = $this->bufferOutputStr;
 
                 $this->bufferOutputStr = '';
@@ -2764,7 +2771,6 @@
 
                     // all errors \o/ !
                     error_reporting( $this->defaultErrorReportingOn );
-                    @ini_set( 'html_errors', false );
 
                     if ( ErrorHandler::isIIS() ) {
                         @ini_set( 'log_errors', false );
@@ -2785,6 +2791,11 @@
                                  */
                                 if ( $self->isOn() ) {
                                     /*
+                                     * Turning off 'html_errors' at this point avoids interference 
+                                     * with xDebugs 'var_dump()'-overload, thus preserving prettyfied dumps
+                                     */
+                                    @ini_set( 'html_errors', false );
+                                    /*
                                      * When using an @, the error reporting drops to 0.
                                      */
                                     if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
@@ -2801,6 +2812,11 @@
 
                     set_exception_handler( function($ex) use ( $self ) {
                         if ( $self->isOn() ) {
+                            /*
+                             * Turning off 'html_errors' at this point avoids interference 
+                             * with xDebugs 'var_dump()'-overload, thus preserving prettyfied dumps
+                             */
+                            @ini_set( 'html_errors', false );
                             $self->reportException( $ex );
                         } else {
                             return false;
