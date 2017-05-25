@@ -3545,7 +3545,7 @@
                     }
                         body {
                             color: #f0f0f0;
-
+                            background-color: #111;
                             tab-size: 4;
                         }
 
