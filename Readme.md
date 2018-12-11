@@ -1,6 +1,8 @@
 PHP Error | Improve Error Reporting for PHP
 ===========================================
 
+**THIS IS NO LOBGER MAINTAINED, Please leave me alone.**
+
 PHP errors are not good enough for development, it's as simple as that. This aims to solve this.
 
 ![Better Error Message](http://i.imgur.com/1G77I.png)
@@ -14,8 +16,6 @@ If the server errors during an ajax request, then the request is paused, and the
 ![ajax server stack trace](http://i.imgur.com/WRgug.png)
 
 This requires no changes to your JavaScript, and works with existing JS libraries such as jQuery.
-
-Check out the [project homepage](http://phperror.net) for a live demo.
 
 Do not use on a live site!
 --------------------------
@@ -46,7 +46,7 @@ Features
 Getting Started
 ---------------
 
- * [Download](http://phperror.net/download/php_error.php), it's just one file.
+ * Download, it's just one file.
  * Place it in your project.
  * import php_error.php
  * call \php_error\reportErrors()
