@@ -1163,6 +1163,8 @@
 
             private $classNotFoundException;
 
+            private $callbacks = array();
+            
             /**
              * = Options =
              *
@@ -2427,6 +2429,12 @@
 
                 $this->logError( $message, $errFile, $errLine, $ex );
 
+                if ($this->triggerCallback( $code, $message, $errLine, $errFile, $ex )) {
+                    // exit in order to end processing
+                    $this->turnOff();
+                    exit(0);
+                }
+                
                 /**
                  * It runs if:
                  *  - it is globally enabled
@@ -2501,6 +2509,32 @@
                 }
             }
 
+            protected function triggerCallback( $code, $message, $errLine, $errFile, $ex=null ) {
+                foreach($this->callbacks as $callback) {
+                    if (call_user_func_array($callback, func_get_args())) return true;
+                }
+            }
+            
+            /** Adds a callback that will be called just right after logging 
+             * 
+             * Callback will receive the same arguments as reportError:
+             * callback($code, $message, $errLine, $errFile, $ex)
+             * 
+             * If the callback returns anything, no other callback will be called and the script
+             * will exit before displaying the error.
+             * 
+             */
+            public function addErrorCallback($callback) {
+                if (is_callable($callback) == false) throw new Exception('Callback not callable!');
+                $this->callbacks[] = $callback;
+            }
+            
+            public function removeErrorCallback($callback) {
+                $key = array_search($callback, $this->callbacks, true);
+                if ($key === false) throw new Exception('Callback not set!');
+                unset($this->callbacks[$key]);
+            }
+            
             private function getStackTrace( $ex, $code, $errFile, $errLine ) {
                 $stackTrace = null;
 
