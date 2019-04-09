@@ -1163,6 +1163,8 @@
 
             private $classNotFoundException;
 
+            private $clearAllBuffers;
+
             /**
              * = Options =
              *
@@ -1268,6 +1270,8 @@
 
                 $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'    , $_SERVER['DOCUMENT_ROOT'] );
                 $this->serverName               = ErrorHandler::optionsPop( $options, 'server_name'         , $_SERVER['SERVER_NAME']   );
+
+                $this->clearAllBuffers          = ErrorHandler::optionsPop( $options, 'clear_all_buffers', false);
 
                 /*
                  * Relative paths might be given for document root,
@@ -1534,6 +1538,9 @@
              * do want it. However otherwise, it will be lost.
              */
             private function discardBuffer() {
+                if ( $this->clearAllBuffers ) {
+                    while( @ob_end_clean() );
+                }
                 $str = $this->bufferOutputStr;
 
                 $this->bufferOutputStr = '';
