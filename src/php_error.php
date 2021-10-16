@@ -109,6 +109,9 @@
            $_php_error_global_handler,
            $_php_error_is_ini_enabled;
 
+    
+    $debug = 'false';
+
     /*
      * Avoid being run twice.
      */
@@ -1261,7 +1264,7 @@
                 }
 
                 $this->saveUrl                  = ErrorHandler::optionsPop( $options, 'save_url', $_SERVER['REQUEST_URI'] );
-                $this->isSavingEnabled          = ErrorHandler::optionsPop( $options, 'enable_saving', true );
+                $this->isSavingEnabled          = ErrorHandler::optionsPop( $options, 'enable_saving', false );
 
                 $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on'  , -1                        );
                 $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off' , error_reporting()         );
@@ -3285,7 +3288,7 @@
                                     <a href="#" id="ajax-retry" class="ajax-button">RETRY</a>
                                 </span>
                             </h2>
-                            <h1 id="error-title"><?php echo $message ?></h1>
+                            <h2 id="error-title"><?php echo $message ?></h2>
                             <div class="error-file-top <?php echo ($fileLinesSets ? 'has_code' : '') ?>">
                                 <h2 id="error-file"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
                                 <?php if ( $isSavingEnabled ) { ?>
@@ -3528,6 +3531,12 @@
                 }
                 @header( ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE );
 
+                global $debug;
+                if($debug == 'false'){
+                    include '500.php';
+                    die();
+                }
+
                 echo '<!DOCTYPE html>';
 
                 if ( $head !== null ) {
@@ -3535,6 +3544,7 @@
                 }
 
                 echo "<link href='http://fonts.googleapis.com/css?family=Droid+Sans+Mono' rel='stylesheet' type='text/css'>";
+                echo "<title>500 Error</title>"
 
                 ?><style>
                     html, body {
@@ -3998,10 +4008,10 @@
                                 #error-editor-ace.ace_editor .ace_constant.ace_other {
                                     color:#cF5d33;
                                 }
-                                #error-editor-ace.ace_editor .ace_constant.ace_character,  {
+                                #error-editor-ace.ace_editor .ace_constant.ace_character  {
                                     color:#CF6A4C;
                                 }
-                                #error-editor-ace.ace_editor .ace_constant.ace_character.ace_escape,  {
+                                #error-editor-ace.ace_editor .ace_constant.ace_character.ace_escape  {
                                     color:#CF6A4C;
                                 }
                                 #error-editor-ace.ace_editor .ace_invalid.ace_illegal {
@@ -4142,6 +4152,7 @@
                             }
                             .error-stack-trace-line > .file-internal-php,
                             .error-stack-trace-line > .filename {
+                                color:white;
                             }
                             .error-stack-trace-line > .lineinfo {
                                 width: 100%; /* fix for chrome */
